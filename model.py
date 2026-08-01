@@ -127,20 +127,23 @@ class SmolLM2(nn.Module):
         for layer in self.layers:
             x = layer(x)
         x = self.norm(x)
-        logits = self.lm_head(x)
-        loss = None
         if targets is not None:
-            loss = self._chunked_ce(logits, targets)
-        return logits, loss
+            # Fused: lm_head applied per chunk — full (B,T,V) logits never materializes
+            loss = self._chunked_ce(x, targets)
+            return None, loss
+        logits = self.lm_head(x)
+        return logits, None
 
-    def _chunked_ce(self, logits, targets, chunk=256):
-        """Memory-efficient cross-entropy: processes the sequence in chunks so
-        the fp32 logits copy never materializes (vocab 49152 is huge)."""
-        B, T, V = logits.shape
+    def _chunked_ce(self, x, targets, chunk=128):
+        """Memory-efficient fused head+cross-entropy: applies lm_head per
+        sequence-chunk so the fp32 logits copy never materializes (vocab 49152 is huge)."""
+        B, T = x.shape[0], x.shape[1]
+        V = self.cfg.vocab_size
         total, count = 0.0, 0
         for t in range(0, T, chunk):
+            logits_chunk = self.lm_head(x[:, t:t + chunk]).float()
             ce = F.cross_entropy(
-                logits[:, t:t + chunk].float().reshape(-1, V),
+                logits_chunk.reshape(-1, V),
                 targets[:, t:t + chunk].reshape(-1),
                 reduction="sum",
                 ignore_index=-100,

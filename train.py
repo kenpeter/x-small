@@ -37,9 +37,10 @@ class TrainConfig:
     rms_norm_eps: float = 1e-5
     dropout: float = 0.0
 
-    # Training (batch 2 × grad-accum 16 = effective 32; fits 12GB VRAM)
-    batch_size: int = 2
-    gradient_accumulation_steps: int = 16
+    # Training (batch 4 × grad-accum 8 = effective 32; maxed for 12GB VRAM —
+    # measured: fwd+bwd peak 10.65GB with fused CE; batch 6+ OOMs)
+    batch_size: int = 4
+    gradient_accumulation_steps: int = 8
     max_steps: int = 100_000
     learning_rate: float = 4e-4
     min_lr: float = 1e-4
@@ -71,7 +72,7 @@ from model import SmolLM2
 class BinShardDataset(IterableDataset):
     def __init__(self, data_dir: Path, seq_len: int, val_frac: float = 0.0, is_val: bool = False):
         self.seq_len = seq_len
-        self.shards = sorted(data_dir.glob("shard_*.bin"))
+        self.shards = sorted(data_dir.glob("*.bin"))
         if not self.shards:
             raise RuntimeError(f"No .bin shards found in {data_dir}")
         self.val_frac = val_frac
