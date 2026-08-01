@@ -1,34 +1,16 @@
 # Python
 __pycache__/
-*.py[cod]
-*$py.class
+*.pyc
+.pytest_cache/
 
-# Virtual environments
+# Env
+venv_xsmall/
 venv/
-.env
+.venv/
 
 # Logs
 *.log
 
-# Model files
-*.bin
-*.pt
-*.pth
-*.onnx
-*.safetensors
-*.model
-
-# Data
-data/
-*.parquet
-*.arrow
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
+# Checkpoints / data (external)
+/home/kenpeter/work/checkpoints/
+/home/kenpeter/work/data/
