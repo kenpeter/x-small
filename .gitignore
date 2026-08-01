@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.env
+
+# Logs
+*.log
+
+# Model files
+*.bin
+*.pt
+*.pth
+*.onnx
+*.safetensors
+*.model
+
+# Data
+data/
+*.parquet
+*.arrow
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
