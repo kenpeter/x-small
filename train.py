@@ -54,7 +54,7 @@ class TrainConfig:
     log_every_n_steps: int = 10
     val_every_n_steps: int = 500
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
-    use_gradient_checkpointing: bool = False
+    use_gradient_checkpointing: bool = True
     compile: bool = False
     seq_len: int = 2048
     val_frac: float = 0.01
