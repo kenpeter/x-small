@@ -101,12 +101,17 @@ class BinShardDataset(IterableDataset):
             end = start + per_worker if worker_info.id < worker_info.num_workers - 1 else len(self.shards)
             shards = self.shards[start:end]
 
-        for shard_path in shards:
+        for shard_idx, shard_path in enumerate(shards):
             tokens = np.memmap(str(shard_path), dtype=self.token_dtype, mode="r")
             n = len(tokens) - self.seq_len
             # Random-ish offset per shard to avoid all workers starting at 0
             offset = (hash(str(shard_path)) % max(1, n)) if n > 0 else 0
-            for i in range(offset, n, self.seq_len):
+            # Paired reversal (arXiv:2604.00260): even shards forward, odd shards
+            # reversed — cancels order-dependent gradient bias (JIT analog).
+            starts = list(range(offset, n, self.seq_len))
+            if shard_idx % 2 == 1:
+                starts.reverse()
+            for i in starts:
                 chunk = tokens[i : i + self.seq_len + 1]
                 if len(chunk) < self.seq_len + 1:
                     continue
