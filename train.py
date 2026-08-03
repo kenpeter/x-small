@@ -135,11 +135,11 @@ class CheckpointManager:
         self.best_path = self.checkpoint_dir / "pretrained_best.pt"
         self.best_loss = float("inf")
 
-    def save(self, model, optimizer, scheduler, step: int, loss: float, is_best: bool = False):
+    def save(self, model, optimizer, scheduler, step: int, loss: float, best_loss: float, is_best: bool = False):
         state = {
             "step": step,
             "loss": loss,
-            "best_loss": self.best_loss,
+            "best_loss": best_loss,
             "model_state_dict": model.state_dict(),
             "optimizer_state_dict": optimizer.state_dict(),
             "scheduler_state_dict": scheduler.state_dict() if scheduler else None,
@@ -152,8 +152,7 @@ class CheckpointManager:
         os.replace(tmp_path, self.latest_path)
         print(f"  💾 Saved latest checkpoint (step {step}, loss {loss:.4f})")
 
-        if is_best or loss < self.best_loss:
-            self.best_loss = loss
+        if is_best or loss < best_loss:
             os.replace(self.latest_path, self.best_path)
             print(f"  ⭐ Saved best checkpoint (loss {loss:.4f})")
 
@@ -200,6 +199,7 @@ class CheckpointManager:
                 print(f"     ⚠ CUDA RNG restore skipped: {e}")
         step = state.get("step", 0)
         best_loss = state.get("best_loss", float("inf"))
+        self.best_loss = best_loss
         print(f"     step {step}, best_loss {best_loss:.4f}")
         return step, best_loss
 
@@ -376,11 +376,11 @@ def train(cfg: TrainConfig):
 
         # Checkpointing
         if step % cfg.save_every_n_steps == 0:
-            ckpt.save(model, optimizer, scheduler, step, val_loss, is_best=(val_loss == best_loss))
+            ckpt.save(model, optimizer, scheduler, step, val_loss, best_loss, is_best=(val_loss == best_loss))
 
     # Final save
     val_loss = estimate_loss(model, val_loader, cfg)
-    ckpt.save(model, optimizer, scheduler, step, val_loss, is_best=(val_loss < best_loss))
+    ckpt.save(model, optimizer, scheduler, step, val_loss, best_loss, is_best=(val_loss < best_loss))
     print(f"\n✅ Training complete. Final val loss: {val_loss:.4f}")
 
 if __name__ == "__main__":
