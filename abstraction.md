@@ -86,8 +86,8 @@ estimates were off. Real config:
 
 | Spec | Value |
 |------|-------|
-| vocab_size | 8192 (native needle) / **49152 (x-small Option B)** |
-| d_model | 512 |
+| vocab_size | 8192 (native needle) / **49152 (x-small SmolLM2)** |
+| d_model | **384** (shrunk from 512 to hit ~45M at 49k vocab) |
 | num_heads | 8 |
 | num_kv_heads | 4 |
 | num_layers | 27 |
@@ -98,13 +98,16 @@ estimates were off. Real config:
 
 **Param counts (verified):**
 
-| Vocab | Total | Embedding | Non-embedding |
-|-------|-------|-----------|---------------|
-| 8192 (needle2-exact) | **45.21M** | 4.19M | 41.02M ✓ matches needle2.pkl |
-| 49152 (Option B) | **66.18M** | 25.17M | 41.02M |
+| Vocab / d_model | Total | Embedding | Non-embedding |
+|-----------------|-------|-----------|---------------|
+| 8192 × 512 (needle2-exact) | **45.21M** | 4.19M | 41.02M ✓ matches needle2.pkl |
+| 49152 × 512 (old Option B) | 66.18M | 25.17M | 41.02M |
+| **49152 × 384 (CURRENT ~45M)** | **43.85M** | 18.87M | 24.98M |
 
-**Decision (Option B):** train on existing SmolLM2-tokenized shards at
-**vocab 49152** → ~66M params, 0.13GB bf16 — no re-tokenization, fits 12GB card.
+**Pivot (user directive 2026-08-21):** "I do not want 135m any more. I want
+45m like needle or similar small sizes." → d_model 384, 27 layers, vocab 49152
+= **43.85M**, ~needle2 scale, keeps SmolLM2 vocab (no re-tokenization). Verified
+forward+MTP+backward on GPU, ~3GB VRAM @ seq 512 (fits 12GB at full 2048×b32).
 
 ### Training: `train_san.py`
 
@@ -148,8 +151,9 @@ domain-tiered sampler ported from small) is stubbed/planned but not yet wired.
 
 ## Status & Pending
 
-✅ Done: SAN port (45.21M @ 8192 exact / 66.18M @ 49152), GPU training verified,
-smoke loss decreasing, Option B decision locked.
+✅ Done: SAN port (45.21M @ needle2-exact / **43.85M @ 49152 current**),
+GPU training verified, smoke loss decreasing, ~45M scale locked (d_model 384,
+27L — user rejected 135M/66M).
 
 🔜 Pending:
 1. **Commit** post-`cfa5334` fixes in `san_model.py` (RoPE device) + `train_san.py` (MTP alignment, val_frac).

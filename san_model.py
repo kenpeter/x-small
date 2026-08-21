@@ -1,7 +1,7 @@
 """Simple Attention Network (SAN) — PyTorch port of cactus-compute/needle architecture.
 
 Faithful port of needle/model/architecture.py (arXiv:2607.18363) from JAX/Flax
-to PyTorch, sized for the needle2 preset (~45M params). Components, 1:1 with the
+to PyTorch, sized to the needle2 scale (~45M params). Components, 1:1 with the
 JAX source:
   - ZCRMSNorm         (zero-centered RMSNorm)
   - HadamardMLP       (fixed Walsh-Hadamard transform MLP — no dense FFN weights)
@@ -29,11 +29,11 @@ _POST_OFF = -4.0
 
 @dataclass
 class SANConfig:
-    vocab_size: int = 8192
-    d_model: int = 768
+    vocab_size: int = 49152
+    d_model: int = 384
     attn_dim: int = 0
-    num_heads: int = 12
-    num_kv_heads: int = 6
+    num_heads: int = 8
+    num_kv_heads: int = 4
     num_layers: int = 27
     max_seq_len: int = 2048
     pad_token_id: int = 0
@@ -429,9 +429,10 @@ class SimpleAttentionNetwork(nn.Module):
 
     def _rope(self, seq_len):
         hd = (self.cfg.attn_dim or self.cfg.d_model) // self.cfg.num_heads
+        dev = next(self.parameters()).device
         if seq_len not in self._rope_cache:
             cos, sin = precompute_rope_freqs(hd, seq_len, self.cfg.rope_theta)
-            self._rope_cache[seq_len] = (cos, sin)
+            self._rope_cache[seq_len] = (cos.to(dev), sin.to(dev))
         return self._rope_cache[seq_len]
 
     def _engram_kv(self, tokens, mask):
