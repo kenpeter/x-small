@@ -176,7 +176,11 @@ def _load_shard_list(shards_dir: Path, seq_len: int):
     total = 0
     for p in shard_paths:
         n_tokens = p.stat().st_size // 2
-        n_seqs = n_tokens // seq_len
+        # Only index sequences that have a full seq_len+1 continuation window
+        # (used by __getitem__ via _fetch_tokens(plus_one=True)). This drops the
+        # trailing partial window when a shard ends exactly on a seq_len boundary;
+        # otherwise the plus_one read would overrun the file (mmap error).
+        n_seqs = (n_tokens - 1) // seq_len
         if n_seqs == 0:
             continue
         entries.append((p, n_seqs, total))
@@ -261,6 +265,13 @@ class StratifiedShardDataset(Dataset):
             if local_idx < start_idx + n_seqs:
                 local = local_idx - start_idx
                 offset = local * self.seq_len
+                # The last indexed sequence of a shard may sit exactly at the
+                # file end (n_seqs = n_tokens // seq_len). Clamp the read so a
+                # plus_one window never overruns the shard (mmap would raise
+                # "mmap length is greater than file size").
+                avail = (shard_path.stat().st_size // 2) - offset
+                if length > avail:
+                    length = avail
                 mm = np.memmap(str(shard_path), dtype=np.uint16, mode='r',
                                offset=offset * 2, shape=(length,))
                 tokens = torch.from_numpy(mm.copy().astype(np.int64))
@@ -366,17 +377,23 @@ def chunked_ce(logits, targets, chunk=256):
 
 
 def san_loss(model, x, y, mtp_weight=0.0):
-    """Compute next-token CE with faithful needle MTP aux loss (optional)."""
+    """Compute next-token CE with faithful needle MTP aux loss (optional).
+
+    Returns (loss_tensor, main_float, mtp_float):
+      - loss_tensor: combined scalar tensor for backward (main + mtp_weight*mtp).
+      - main_float / mtp_float: the two CE terms as Python floats, for logging.
+    main[t] predicts token[t+1]=y[t]; MTP at position t sees x[t]+emb(tok[t+1])
+    -> predicts tok[t+2] = mtp[:, :-1] vs y[:, 1:].
+    """
     if mtp_weight > 0:
         main, mtp = model(x, return_mtp=True)
-        # main[t] predicts token[t+1] = y[t] (full alignment, no slice)
-        loss = chunked_ce(main, y)
-        # MTP: at position t, sees x[t] + emb(tok[t+1]) -> predicts tok[t+2].
-        # mtp[:, :-1] (B,S-1,V) aligns to target y[:, 1:] (B,S-1).
-        loss = loss + mtp_weight * chunked_ce(mtp[:, :-1], y[:, 1:])
-        return loss
+        main_ce = chunked_ce(main, y)
+        mtp_ce = chunked_ce(mtp[:, :-1], y[:, 1:])
+        loss = main_ce + mtp_weight * mtp_ce
+        return loss, main_ce.item(), mtp_ce.item()
     logits = model(x)
-    return chunked_ce(logits, y)
+    main_ce = chunked_ce(logits, y)
+    return main_ce, main_ce.item(), 0.0
 
 
 # ─── LR ──────────────────────────────────────────────────────────────
@@ -504,6 +521,7 @@ def main():
             pg["lr"] = lr
 
         acc_loss = 0.0
+        acc_main, acc_mtp = 0.0, 0.0
         for _ in range(cfg.grad_accum):
             try:
                 batch = next(train_iter)
@@ -515,8 +533,12 @@ def main():
             else:                        # flat farm path
                 x, y = batch
             x, y = x.to(device), y.to(device)
-            loss = san_loss(model, x, y, cfg.mtp_weight) / cfg.grad_accum
+            out = san_loss(model, x, y, cfg.mtp_weight)
+            loss, main_ce, mtp_ce = out  # loss=tensor (backward), main/mtp=floats
+            loss = loss / cfg.grad_accum
             acc_loss += loss.item() * cfg.grad_accum
+            acc_main += (main_ce if main_ce else 0.0)
+            acc_mtp += (mtp_ce if mtp_ce else 0.0)
             loss.backward()
 
         torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.max_grad_norm)
@@ -528,8 +550,12 @@ def main():
             dt = time.time() - t0
             t0 = time.time()
             tok_s = (cfg.batch_size * cfg.seq_len * cfg.grad_accum * cfg.log_every) / dt
-            print(f"step {step:6d} | loss {running/cfg.log_every:.4f} | lr {lr:.2e} | {dt:.1f}s | {tok_s:,.0f} tok/s")
-            running = 0.0
+            n = cfg.log_every
+            ga = cfg.grad_accum
+            print(f"step {step:6d} | loss {running/n/ga:.4f} "
+                  f"[main {acc_main/ga:.3f} | mtp {acc_mtp/ga:.3f}] "
+                  f"lr {lr:.2e} | {dt:.1f}s | {tok_s:,.0f} tok/s")
+            running, acc_main, acc_mtp = 0.0, 0.0, 0.0
 
         if step % cfg.save_every == 0 or step == cfg.max_steps:
             state = {"step": step, "loss": acc_loss,
