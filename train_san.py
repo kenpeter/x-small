@@ -123,6 +123,7 @@ class TrainConfig:
     save_every: int = 2000
     log_every: int = 10
     mtp_weight: float = 0.1
+    use_checkpoint: bool = True  # gradient checkpoint MHC layers (cuts long-seq VRAM)
     data_dir: str = "/home/kenpeter/work/data/_shards_final"
     checkpoint_dir: str = "/home/kenpeter/work/checkpoints/xsmall_san"
     dtype: str = "bfloat16"
@@ -158,7 +159,7 @@ def main():
     san_cfg = SANConfig(vocab_size=cfg.vocab_size, d_model=cfg.d_model,
                         num_heads=cfg.num_heads, num_kv_heads=cfg.num_kv_heads,
                         num_layers=cfg.num_layers, max_seq_len=cfg.seq_len,
-                        dtype=cfg.dtype)
+                        use_checkpoint=cfg.use_checkpoint, dtype=cfg.dtype)
     model = SimpleAttentionNetwork(san_cfg).to(device)
     model.train()
     print(f"PARAMS: {model.count_parameters()/1e6:.2f}M")

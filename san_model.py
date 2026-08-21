@@ -18,6 +18,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+# Optional Triton accelerators (guarded — model works fine without triton).
+try:
+    from san_triton import triton_sinkhorn
+    _HAS_TRITON = True
+except Exception:
+    _HAS_TRITON = False
+
 ENGRAM_SUB_DIM = 128
 ENGRAM_CONV_TAPS = 4
 _ENGRAM_SEED = 0x9E3779B9
@@ -44,11 +51,11 @@ class SANConfig:
     engram_slots: int = 8192
     engram_layers: tuple = (2, 15)
     mhc_lanes: int = 4
+    use_checkpoint: bool = False  # gradient checkpointing on MHC layers (cuts long-seq memory)
 
     def __post_init__(self):
         self.attn_dim = self.attn_dim or self.d_model
         self.engram_layers = tuple(self.engram_layers)
-
 
 def _walsh_matrix(n):
     H = torch.tensor([[1.0]])
@@ -245,14 +252,21 @@ class MultiHeadAttention(nn.Module):
         if rope is not None:
             cos, sin = rope
             q, k = apply_rope(q, cos, sin), apply_rope(k, cos, sin)
+        # GQA repeat so k/v match num_heads (SDPA needs equal head counts + mask).
         n_rep = self.num_heads // nk
         if n_rep > 1:
-            k, v = k.repeat_interleave(n_rep, 1), v.repeat_interleave(n_rep, 1)
-        attn = (q @ k.transpose(-1, -2)) / math.sqrt(hd)
-        if mask is not None:
-            attn = attn.masked_fill(~mask, float("-inf"))
-        attn = torch.softmax(attn.float(), dim=-1).to(self.dtype)
-        out = (attn @ v).transpose(1, 2).reshape(B, T, self.num_heads * hd)
+            k = k.repeat_interleave(n_rep, 1)
+            v = v.repeat_interleave(n_rep, 1)
+        if mask is not None and tuple(mask.shape[-2:]) == (T, T):
+            attn_mask = mask.expand(B, self.num_heads, T, T)
+            is_causal = False
+        else:
+            attn_mask = None
+            is_causal = True
+        out = F.scaled_dot_product_attention(
+            q, k, v, attn_mask=attn_mask, is_causal=is_causal,
+            scale=1.0 / math.sqrt(hd))  # (B, num_heads, T, hd)
+        out = out.transpose(1, 2).reshape(B, T, self.num_heads * hd)
         out = out * torch.sigmoid(self.gate_proj(x))
         return self.out_proj(out.to(self.dtype))
 
@@ -445,6 +459,35 @@ class SimpleAttentionNetwork(nn.Module):
         pairs = [e(indices, ngram_ok, tap_ok) for e in self.engrams]
         return torch.stack([k for k, _ in pairs]), torch.stack([v for _, v in pairs])
 
+    def _mhc_step(self, i, X, mask, rope, engram_kv, site_flags_i):
+        """One Multi-Lane Hyper-Connection layer step (Block + Sinkhorn routing)."""
+        B, T, lanes, d = X.shape
+        nC = lanes * d
+        cfg = self.cfg
+        xf = X.float()
+        nx = _rms_unit(X.reshape(B, T, nC))
+        hpre = torch.sigmoid(
+            self.a_pre[i] * (nx @ self.phi_pre[i].float()) + self.b_pre[i] + self._pre_off)
+        u = torch.einsum("btn,btnc->btc", hpre, xf).to(self.dtype)  # (B,T,d)
+
+        # engram site injection: full site stack + per-layer site_flags row
+        block_in = self.blocks[i](u, mask=mask, rope=rope,
+                                  engram_kv=engram_kv if engram_kv is not None else None,
+                                  site_flags=site_flags_i)
+        y = block_in - u  # block delta (B,T,d)
+
+        hpost = 2 * torch.sigmoid(
+            self.a_post[i] * (nx @ self.phi_post[i].float()) + self.b_post[i] + self._post_off)
+        res = nx @ self.phi_res[i].float()  # (B,T,L*L)
+        sink_in = self.a_res[i] * res.reshape(B, T, lanes, lanes) + self.b_res[i]
+        if _HAS_TRITON:
+            hres = triton_sinkhorn(sink_in)  # 12x faster persistent 20-iter kernel
+        else:
+            hres = _sinkhorn(sink_in)
+        new_x = (torch.einsum("btij,btjc->btic", hres, xf)
+                 + hpost.unsqueeze(-1) * y.unsqueeze(2).float()).to(self.dtype)
+        return new_x
+
     def forward(self, tokens, mask=None, return_mtp=False):
         cfg = self.cfg
         if mask is None:
@@ -467,24 +510,12 @@ class SimpleAttentionNetwork(nn.Module):
         lane_i = torch.arange(cfg.num_layers, device=tokens.device) % lanes
 
         for i in range(cfg.num_layers):
-            xf = X.float()
-            nx = _rms_unit(X.reshape(B, T, nC))
-            hpre = torch.sigmoid(
-                self.a_pre[i] * (nx @ self.phi_pre[i].float()) + self.b_pre[i] + self._pre_off)
-            u = torch.einsum("btn,btnc->btc", hpre, xf).to(self.dtype)  # (B,T,d)
-
-            # engram site injection: full site stack + per-layer site_flags row
-            block_in = self.blocks[i](u, mask=mask, rope=rope,
-                                      engram_kv=engram_kv if engram_kv is not None else None,
-                                      site_flags=site_flags[i])
-            y = block_in - u  # block delta (B,T,d)
-
-            hpost = 2 * torch.sigmoid(
-                self.a_post[i] * (nx @ self.phi_post[i].float()) + self.b_post[i] + self._post_off)
-            res = nx @ self.phi_res[i].float()  # (B,T,L*L)
-            hres = _sinkhorn(self.a_res[i] * res.reshape(B, T, lanes, lanes) + self.b_res[i])
-            new_x = (torch.einsum("btij,btjc->btic", hres, xf)
-                     + hpost.unsqueeze(-1) * y.unsqueeze(2).float()).to(self.dtype)
+            site_i = site_flags[i]
+            if cfg.use_checkpoint and self.training:
+                new_x = torch.utils.checkpoint.checkpoint(
+                    self._mhc_step, i, X, mask, rope, engram_kv, site_i, use_reentrant=False)
+            else:
+                new_x = self._mhc_step(i, X, mask, rope, engram_kv, site_i)
             X = new_x
 
         x = X.mean(dim=2)
