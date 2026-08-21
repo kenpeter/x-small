@@ -413,7 +413,7 @@ class TrainConfig:
     mtp_weight: float = 0.1
     use_checkpoint: bool = True  # gradient checkpoint MHC layers (cuts long-seq VRAM)
     data_dir: str = "/home/kenpeter/work/data/_shards_final"
-    checkpoint_dir: str = "/home/kenpeter/work/checkpoints/xsmall_san"
+    checkpoint_dir: str = "/home/kenpeter/work/x-small/checkpoints/san"  # inside project (user rule)
     dtype: str = "bfloat16"
     curriculum: bool = False  # DoReMi-lite G1-G4 stratified dynamic mix
 
