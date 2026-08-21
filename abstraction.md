@@ -152,12 +152,16 @@ domain-tiered sampler ported from small) is stubbed/planned but not yet wired.
 ## Status & Pending
 
 ✅ Done: SAN port (45.21M @ needle2-exact / **43.85M @ 49152 current**),
-GPU training verified, smoke loss decreasing, ~45M scale locked (d_model 384,
-27L — user rejected 135M/66M).
+~45M scale locked (d_model 384, 27L — user rejected 135M/66M).
+
+✅ GPU optimization (`ad2b800`): **Triton Sinkhorn** (1.13→0.095ms, 12×, parity
+2.4e-7), **flash SDPA attention** (kills the (B,H,T,T) fp32 OOM), **grad
+checkpointing** (use_checkpoint — b4×T2048 fwd+bwd fits 5.9GB, was OOM). Full
+train smoke OK: 43.85M, loss 23.89@step10, ~9k tok/s. FWHT kernel deferred
+(Triton static_range constexpr limits; dense cuBLAS GEMM kept at n=512).
 
 🔜 Pending:
-1. **Commit** post-`cfa5334` fixes in `san_model.py` (RoPE device) + `train_san.py` (MTP alignment, val_frac).
-2. **Launch real GPU run** — batch 4 × accum 8, seq 2048, 50k steps, detached + watchdog.
-3. **Port data-mix** — G1–G4 curriculum + code-dominant boost (`curriculum_boost.json`) from 1B small into `train_san.py`.
-4. **Eval** trained SAN on code/math prompts.
-5. Housekeeping: untracked `token_rotation_test.py` (delete vs commit — user undecided); `__pycache__` cleanup.
+1. **Launch real GPU run** — batch 4 × accum 8, seq 2048, 50k steps, detached + watchdog.
+2. **Port data-mix** — G1–G4 curriculum + code-dominant boost (`curriculum_boost.json`) from 1B small into `train_san.py`.
+3. **Eval** trained SAN on code/math prompts.
+4. Housekeeping: untracked `token_rotation_test.py` (delete vs commit — user undecided); `__pycache__` cleanup.
