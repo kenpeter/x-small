@@ -129,7 +129,7 @@ if _HAS_TRITON:
         y = tl.load(y_ptr + b * T * D + t * D + offs_d, mask=mask_d, other=0.0).to(tl.float32)  # (D,)
         hpost = tl.load(hpost_ptr + b * T * L + t * L + tl.arange(0, L)).to(tl.float32)
         new_x = tl.sum(hres[:, :, None] * xf[None, :, :], axis=1) + hpost[:, None] * y[None, :]
-        tl.store(out_ptr + b * T * L * D + t * L * D + offs_ld, new_x.reshape(L * D), mask=mask_ld)
+        tl.store(out_ptr + b * T * L * D + t * L * D + offs_ld, new_x.reshape(L * BLOCK_D), mask=mask_ld)
 
 
 class _MHC_PRE(torch.autograd.Function):
