@@ -73,5 +73,106 @@ def triton_fwht(x):
     return x
 
 
+# ─── MHC routing fusion ───────────────────────────────────────────────────────
+# Fuses the per-layer Multi-Lane Hyper-Connection routing tails (the
+# memory-bound elementwise + einsum + Sinkhorn) into single Triton kernels.
+# Numerics follow the triton-bitwise-parity rules: explicit fp32, careful
+# scalars. Sinkhorn stays non-differentiable (matches the eager reference —
+# routing params get no grad through it), so these are wrapped in autograd
+# Functions that recompute hres in the backward for the xf/hpost/y grads.
+if _HAS_TRITON:
+    @triton.jit
+    def mhc_pre_kernel(hpre_ptr, xf_ptr, u_ptr,
+                       B: tl.constexpr, T: tl.constexpr, L: tl.constexpr, D: tl.constexpr):
+        """u[b,t,c] = sum_l hpre[b,t,l] * xf[b,t,l,c]   (einsum 'btn,btnc->btc')."""
+        pid = tl.program_id(0)
+        b = pid // T
+        t = pid % T
+        hpre = tl.load(hpre_ptr + b * T * L + t * L + tl.arange(0, L)).to(tl.float32)
+        xf = tl.load(xf_ptr + b * T * L * D + t * L * D +
+                     tl.arange(0, L * D)).to(tl.float32).reshape(L, D)
+        u = tl.sum(hpre[:, None] * xf, axis=0)
+        tl.store(u_ptr + b * T * D + t * D + tl.arange(0, D), u)
+
+    @triton.jit
+    def mhc_post_kernel(sink_in_ptr, xf_ptr, y_ptr, hpost_ptr, out_ptr,
+                        B: tl.constexpr, T: tl.constexpr, L: tl.constexpr, D: tl.constexpr,
+                        ITERS: tl.constexpr):
+        """Inline 20-iter Sinkhorn on sink_in, then
+        new_x[b,t,l,c] = sum_j hres[l,j]*xf[b,t,j,c] + hpost[l]*y[b,t,c]
+        (einsum 'btij,btjc->btic' + broadcast)."""
+        pid = tl.program_id(0)
+        b = pid // T
+        t = pid % T
+        base = b * T * L * L + t * L * L
+        sk = tl.load(sink_in_ptr + base + tl.arange(0, L * L)).to(tl.float32).reshape(L, L)
+        for _ in tl.static_range(ITERS):
+            row_max = tl.max(sk, axis=1)
+            sk = sk - row_max[:, None]
+            row_s = tl.sum(tl.exp(sk), axis=1)
+            sk = sk - tl.log(row_s)[:, None]
+            col_max = tl.max(sk, axis=0)
+            sk = sk - col_max[None, :]
+            col_s = tl.sum(tl.exp(sk), axis=0)
+            sk = sk - tl.log(col_s)[None, :]
+        hres = tl.exp(sk)                                                 # (L,L)
+        xf = tl.load(xf_ptr + b * T * L * D + t * L * D +
+                     tl.arange(0, L * D)).to(tl.float32).reshape(L, D)    # (L,D)
+        y = tl.load(y_ptr + b * T * D + t * D + tl.arange(0, D)).to(tl.float32)  # (D,)
+        hpost = tl.load(hpost_ptr + b * T * L + t * L + tl.arange(0, L)).to(tl.float32)
+        new_x = tl.sum(hres[:, :, None] * xf[None, :, :], axis=1) + hpost[:, None] * y[None, :]
+        tl.store(out_ptr + b * T * L * D + t * L * D + tl.arange(0, L * D),
+                 new_x.reshape(L * D))
+
+
+class _MHC_PRE(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, hpre, xf):
+        B, T, L, D = xf.shape
+        u = torch.empty((B, T, D), dtype=torch.float32, device=xf.device)
+        mhc_pre_kernel[(B * T,)](hpre, xf, u, B=B, T=T, L=L, D=D)
+        ctx.save_for_backward(hpre, xf)
+        return u
+
+    @staticmethod
+    def backward(ctx, gu):
+        hpre, xf = ctx.saved_tensors
+        g_hpre = torch.einsum("btc,btnc->btn", gu, xf)
+        g_xf = torch.einsum("btc,btn->btnc", gu, hpre)
+        return g_hpre, g_xf
+
+
+class _MHC_POST(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, sink_in, xf, y, hpost):
+        B, T, L, D = xf.shape
+        sk_det = sink_in.detach()
+        hres = triton_sinkhorn(sk_det)                  # non-diff, matches eager
+        out = torch.empty((B, T, L, D), dtype=torch.float32, device=xf.device)
+        mhc_post_kernel[(B * T,)](sk_det, xf, y, hpost, out,
+                                  B=B, T=T, L=L, D=D, ITERS=20)
+        ctx.save_for_backward(hres, xf, y, hpost)
+        return out
+
+    @staticmethod
+    def backward(ctx, g_out):
+        hres, xf, y, hpost = ctx.saved_tensors
+        g_xf = torch.einsum("btic,btij->btjc", g_out, hres)
+        g_hpost = torch.einsum("btic,btc->bti", g_out, y)
+        g_y = torch.einsum("btic,bti->btc", g_out, hpost)
+        return None, g_xf, g_y, g_hpost
+
+
+def mhc_pre(hpre, xf):
+    """Fused lane-mix einsum. hpre (B,T,L) fp32, xf (B,T,L,D) fp32 -> u (B,T,D) fp32."""
+    return _MHC_PRE.apply(hpre, xf)
+
+
+def mhc_post(sink_in, xf, y, hpost):
+    """Fused Sinkhorn + combine. y (B,T,D) fp32, hpost (B,T,L) fp32
+    -> new_x (B,T,L,D) fp32."""
+    return _MHC_POST.apply(sink_in, xf, y, hpost)
+
+
 def available():
     return _HAS_TRITON

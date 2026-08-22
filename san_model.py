@@ -20,7 +20,7 @@ import torch.nn.functional as F
 
 # Optional Triton accelerators (guarded — model works fine without triton).
 try:
-    from san_triton import triton_sinkhorn
+    from san_triton import triton_sinkhorn, mhc_pre, mhc_post
     _HAS_TRITON = True
 except Exception:
     _HAS_TRITON = False
@@ -257,9 +257,17 @@ class MultiHeadAttention(nn.Module):
         if n_rep > 1:
             k = k.repeat_interleave(n_rep, 1)
             v = v.repeat_interleave(n_rep, 1)
-        if mask is not None and tuple(mask.shape[-2:]) == (T, T):
-            attn_mask = mask.expand(B, self.num_heads, T, T)
-            is_causal = False
+        if mask is not None and mask.shape[-2:] == (T, T):
+            # Standard causal (lower-triangular) mask -> use is_causal so SDPA picks
+            # FlashAttention (O(B*T) mem) instead of materializing (B,H,T,T). Math is
+            # identical. Anything non-causal (e.g. packing mask) keeps the explicit path.
+            causal_ref = make_causal_mask(T, mask.device)
+            if mask.shape == causal_ref.shape and torch.equal(mask, causal_ref):
+                attn_mask = None
+                is_causal = True
+            else:
+                attn_mask = mask.expand(B, self.num_heads, T, T)
+                is_causal = False
         else:
             attn_mask = None
             is_causal = True
@@ -468,7 +476,7 @@ class SimpleAttentionNetwork(nn.Module):
         nx = _rms_unit(X.reshape(B, T, nC))
         hpre = torch.sigmoid(
             self.a_pre[i] * (nx @ self.phi_pre[i].float()) + self.b_pre[i] + self._pre_off)
-        u = torch.einsum("btn,btnc->btc", hpre, xf).to(self.dtype)  # (B,T,d)
+        u = mhc_pre(hpre, xf).to(self.dtype)  # (B,T,d) fused lane-mix einsum
 
         # engram site injection: full site stack + per-layer site_flags row
         block_in = self.blocks[i](u, mask=mask, rope=rope,
@@ -481,14 +489,23 @@ class SimpleAttentionNetwork(nn.Module):
         res = nx @ self.phi_res[i].float()  # (B,T,L*L)
         sink_in = self.a_res[i] * res.reshape(B, T, lanes, lanes) + self.b_res[i]
         if _HAS_TRITON:
-            hres = triton_sinkhorn(sink_in)  # 12x faster persistent 20-iter kernel
+            new_x = mhc_post(sink_in, xf, y.float(), hpost).to(self.dtype)  # fused Sinkhorn+combine
         else:
             hres = _sinkhorn(sink_in)
-        new_x = (torch.einsum("btij,btjc->btic", hres, xf)
-                 + hpost.unsqueeze(-1) * y.unsqueeze(2).float()).to(self.dtype)
+            new_x = (torch.einsum("btij,btjc->btic", hres, xf)
+                     + hpost.unsqueeze(-1) * y.unsqueeze(2).float()).to(self.dtype)
         return new_x
 
-    def forward(self, tokens, mask=None, return_mtp=False):
+    def _tied_logits(self, h):
+        # (B,T,d) -> (B,T,V), chunked over T to bound peak VRAM (enables larger B).
+        # Numerically identical to h @ embedding.weight.T, just materialized per chunk.
+        V = self.embedding.weight.shape[0]
+        out = torch.empty(h.shape[0], h.shape[1], V, dtype=h.dtype, device=h.device)
+        for s in range(0, h.shape[1], 256):
+            out[:, s:s + 256] = h[:, s:s + 256] @ self.embedding.weight.t()
+        return out
+
+    def _hidden(self, tokens, mask=None):
         cfg = self.cfg
         if mask is None:
             mask = make_causal_mask(tokens.shape[1], tokens.device)
@@ -520,19 +537,78 @@ class SimpleAttentionNetwork(nn.Module):
 
         x = X.mean(dim=2)
         x = self.final_norm(x)
-        logits = x.to(self.dtype) @ self.embedding.weight.T
+        return x
+
+    def forward(self, tokens, mask=None, return_mtp=False):
+        cfg = self.cfg
+        x = self._hidden(tokens, mask).to(self.dtype)
+        logits = self._tied_logits(x)
         if not return_mtp:
             return logits
         # MTP: predict token t+2. Combine main output x with embedding of token
         # t+1, run one more block, then tied-head logits (faithful to JAX).
+        rope = self._rope(tokens.shape[1])
+        nxt = F.pad(tokens[:, 1:], (0, 1))
+        e2 = self.mtp_emb_norm(self.embedding(nxt) * self.embed_scale)
+        m = self.mtp_combine(torch.cat([x, e2], dim=-1).to(self.dtype))
+        m = self.mtp_block(m, mask=mask, rope=rope)
+        m = self.mtp_final_norm(m)
+        mtp_logits = self._tied_logits(m)
+        return logits, mtp_logits
+
+    def compute_loss(self, tokens, y, mtp_weight=0.0):
+        """Chunked CE — peak logits = (B, 256, vocab), never the full (B,T,vocab).
+
+        Returns (loss_tensor, main_ce_float, mtp_ce_float) so the trainer's
+        `san_loss` contract is unchanged. Numerically identical to forward+chunked_ce.
+        """
+        cfg = self.cfg
+        T = tokens.shape[1]
+        x = self._hidden(tokens, None).to(self.dtype)  # (B,T,d)
+        V = self.embedding.weight.shape[0]
+        W = self.embedding.weight.t()  # (d, V)
+
+        # main: x[t] predicts y[t]. Each chunk's CE is checkpointed so the large
+        # (B,256,V) fp32 logits are NOT kept in the autograd graph (recomputed in
+        # backward) — this is what was OOMing at B64 (15 chunks x ~3.2 GiB).
+        def _ce_chunk(xc, Wt, yt):
+            lg = xc @ Wt  # bf16; cross_entropy computes in bf16 (no fp32 temp -> fits VRAM)
+            return F.cross_entropy(lg.reshape(-1, Wt.shape[1]), yt.reshape(-1),
+                                   reduction="sum", ignore_index=-100)
+        tot = torch.zeros((), dtype=torch.float32, device=tokens.device)
+        cnt = torch.zeros((), dtype=torch.long, device=tokens.device)
+        CHK = 64  # chunk size: bounds the (B,CHK,V) CE temp (~0.4GiB @B32)
+        for s in range(0, T, CHK):
+            ck = min(CHK, T - s)
+            ce = torch.utils.checkpoint.checkpoint(
+                _ce_chunk, x[:, s:s + ck], W, y[:, s:s + ck], use_reentrant=False)
+            tot += ce
+            cnt += (y[:, s:s + ck] != -100).sum()
+        main_ce = tot / cnt.clamp(min=1)
+
+        if mtp_weight <= 0:
+            return main_ce, float(main_ce.item()), 0.0
+
+        # MTP: m[t] predicts y[t+1]; iterate m-positions 0..T-2
+        mask = make_causal_mask(T, tokens.device)
         rope = self._rope(T)
         nxt = F.pad(tokens[:, 1:], (0, 1))
         e2 = self.mtp_emb_norm(self.embedding(nxt) * self.embed_scale)
         m = self.mtp_combine(torch.cat([x, e2], dim=-1).to(self.dtype))
         m = self.mtp_block(m, mask=mask, rope=rope)
         m = self.mtp_final_norm(m)
-        mtp_logits = m.to(self.dtype) @ self.embedding.weight.T
-        return logits, mtp_logits
+        tot2 = torch.zeros((), dtype=torch.float32, device=tokens.device)
+        cnt2 = torch.zeros((), dtype=torch.long, device=tokens.device)
+        for s in range(0, T - 1, CHK):
+            ck = min(CHK, T - 1 - s)
+            tgt = y[:, s + 1:s + 1 + ck]
+            ce = torch.utils.checkpoint.checkpoint(
+                _ce_chunk, m[:, s:s + ck], W, tgt, use_reentrant=False)
+            tot2 += ce
+            cnt2 += (tgt != -100).sum()
+        mtp_ce = tot2 / cnt2.clamp(min=1)
+        loss = main_ce + mtp_weight * mtp_ce
+        return loss, float(main_ce.item()), float(mtp_ce.item())
 
     def count_parameters(self):
         return sum(p.numel() for p in self.parameters())
