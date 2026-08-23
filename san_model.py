@@ -52,6 +52,9 @@ class SANConfig:
     engram_layers: tuple = (2, 15)
     mhc_lanes: int = 4
     use_checkpoint: bool = False  # gradient checkpointing on MHC layers (cuts long-seq memory)
+    ckpt_every: int = 3  # Checkmate-style: checkpoint every K-th layer, keep the rest
+                         # in VRAM (12GB @ B=4 leaves ~8.7GB free; K=3 keeps 18/27
+                         # activations ~8.3GB, recomputes only 9 layers in backward)
 
     def __post_init__(self):
         self.attn_dim = self.attn_dim or self.d_model
@@ -209,8 +212,10 @@ class Engram(nn.Module):
 def apply_rope(x, cos, sin):
     T = x.shape[2]
     half = x.shape[-1] // 2
-    cos = cos[:T][None, None, :, :]
-    sin = sin[:T][None, None, :, :]
+    if cos.dim() == 3:  # raw cache (T, hd/2) — slice per layer
+        cos = cos[:T][None, None, :, :]
+        sin = sin[:T][None, None, :, :]
+    # else: pre-sliced (1,1,T,hd/2) from _hidden — no per-layer slice work
     x1, x2 = x[..., :half], x[..., half:]
     return torch.cat([x1 * cos - x2 * sin, x2 * cos + x1 * sin], dim=-1).to(x.dtype)
 
@@ -511,7 +516,8 @@ class SimpleAttentionNetwork(nn.Module):
             mask = make_causal_mask(tokens.shape[1], tokens.device)
         B, T = tokens.shape
         x = self.embedding(tokens) * self.embed_scale
-        rope = self._rope(T)
+        cos, sin = self._rope(T)
+        rope = (cos[None, None, :, :], sin[None, None, :, :])  # pre-sliced once
         engram_kv = self._engram_kv(tokens, mask)
 
         # site flags: which layer fires each engram site
@@ -528,7 +534,10 @@ class SimpleAttentionNetwork(nn.Module):
 
         for i in range(cfg.num_layers):
             site_i = site_flags[i]
-            if cfg.use_checkpoint and self.training:
+            # Checkmate-style selective checkpointing: checkpoint only every
+            # ckpt_every-th layer (recomputed in backward); intermediate layers
+            # keep activations in VRAM — we have ~8.7GB free at B=4 S=2048.
+            if cfg.use_checkpoint and self.training and i % cfg.ckpt_every == 0:
                 new_x = torch.utils.checkpoint.checkpoint(
                     self._mhc_step, i, X, mask, rope, engram_kv, site_i, use_reentrant=False)
             else:
