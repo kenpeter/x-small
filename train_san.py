@@ -440,20 +440,27 @@ class TrainConfig:
 def _compile_model(model):
     """Compile for max throughput (Triton-backed inductor). Falls back gracefully.
 
-    Uses max-autotune-no-cudagraphs: full Triton kernel autotune without CUDA
-    Graphs (Graphs cost ~1GiB VRAM we can't spare on a 45M model @ B=8).
+    Mode chain: default+cudagraphs -> max-autotune-no-cudagraphs -> eager.
+    CUDA graphs now fit: 12GB GPU, batch 4 uses ~2.4GB, ~9.9GB free (graphs ~1GiB).
+    \"default\" mode = fast compile (no 13-min autotune tax); the Triton kernels
+    are already the bottleneck, so mode max-autotune buys nothing extra.
     """
     # Compile the ACTUAL hot path (san_loss -> model.compute_loss -> _hidden),
     # NOT model.forward (which training never calls — that's why the old
     # `torch.compile(model)` gave zero speedup + a 13-min autotune tax).
     # dynamic=False: B,T,L shapes are fixed -> no recompiles, fastest path.
-    for mode in ("default", "max-autotune-no-cudagraphs"):
+    import torch._inductor.config as _ind
+    for mode, cudagraphs in (("default", True), ("max-autotune-no-cudagraphs", False)):
         try:
+            prev = _ind.triton.cudagraphs
+            _ind.triton.cudagraphs = cudagraphs
             model.compute_loss = torch.compile(model.compute_loss,
                                                dynamic=False, mode=mode)
+            print(f"  ✅ compiled compute_loss mode={mode} cudagraphs={cudagraphs}")
             return model
         except Exception as e:
-            print(f"  ⚠ torch.compile(compute_loss,{mode}) failed: {e}; trying next")
+            _ind.triton.cudagraphs = prev
+            print(f"  ⚠ torch.compile(compute_loss,{mode},cudagraphs={cudagraphs}) failed: {e}; trying next")
     print("  ⚠ torch.compile failed; running eager (no compile)")
     return model
 

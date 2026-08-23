@@ -139,7 +139,7 @@ class ZCRMSNorm(nn.Module):
         return ((1 + self.scale) * x / rms).to(self.dtype)
 
 
-def _sinkhorn(logits, iters=20):
+def _sinkhorn(logits, iters=14):
     log_K = logits.float()
     for _ in range(iters):
         log_K = log_K - torch.logsumexp(log_K, dim=-1, keepdim=True)
