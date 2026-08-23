@@ -1,16 +1,10 @@
-# Python
+# checkpoints NEVER in git (278MB each — user rule: ckpts live in project dir on disk only)
+checkpoints/
+*.pt
+*.pkl
+
+# scratch / experiments
+runs/
+probe_mem*.py
 __pycache__/
 *.pyc
-.pytest_cache/
-
-# Env
-venv_xsmall/
-venv/
-.venv/
-
-# Logs
-*.log
-
-# Checkpoints / data (external)
-/home/kenpeter/work/checkpoints/
-/home/kenpeter/work/data/

@@ -440,27 +440,26 @@ class TrainConfig:
 def _compile_model(model):
     """Compile for max throughput (Triton-backed inductor). Falls back gracefully.
 
-    Mode chain: default+cudagraphs -> max-autotune-no-cudagraphs -> eager.
-    CUDA graphs now fit: 12GB GPU, batch 4 uses ~2.4GB, ~9.9GB free (graphs ~1GiB).
-    \"default\" mode = fast compile (no 13-min autotune tax); the Triton kernels
-    are already the bottleneck, so mode max-autotune buys nothing extra.
+    Mode chain: default -> max-autotune-no-cudagraphs -> eager.
+    CUDA-graphs deliberately OFF: profile shows the step is GPU-bound (720ms GPU
+    vs 539ms CPU) — graphs only save CPU launch time — and grad_accum's 8
+    forwards-then-backwards pattern corrupts the captured pool (stale RoPE cos
+    reads). "default" mode = fast compile (no 13-min autotune tax); the Triton
+    kernels + thousands of tiny elementwise kernels dominate, so mode
+    max-autotune buys little extra.
     """
     # Compile the ACTUAL hot path (san_loss -> model.compute_loss -> _hidden),
     # NOT model.forward (which training never calls — that's why the old
     # `torch.compile(model)` gave zero speedup + a 13-min autotune tax).
     # dynamic=False: B,T,L shapes are fixed -> no recompiles, fastest path.
-    import torch._inductor.config as _ind
-    for mode, cudagraphs in (("default", True), ("max-autotune-no-cudagraphs", False)):
+    for mode in ("default", "max-autotune-no-cudagraphs"):
         try:
-            prev = _ind.triton.cudagraphs
-            _ind.triton.cudagraphs = cudagraphs
             model.compute_loss = torch.compile(model.compute_loss,
                                                dynamic=False, mode=mode)
-            print(f"  ✅ compiled compute_loss mode={mode} cudagraphs={cudagraphs}")
+            print(f"  ✅ compiled compute_loss mode={mode}")
             return model
         except Exception as e:
-            _ind.triton.cudagraphs = prev
-            print(f"  ⚠ torch.compile(compute_loss,{mode},cudagraphs={cudagraphs}) failed: {e}; trying next")
+            print(f"  ⚠ torch.compile(compute_loss,{mode}) failed: {e}; trying next")
     print("  ⚠ torch.compile failed; running eager (no compile)")
     return model
 
@@ -590,6 +589,14 @@ def main():
         acc_main, acc_mtp = 0.0, 0.0
         acc_dom_loss, acc_dom_n = {}, {}
         for _ in range(cfg.grad_accum):
+            # CUDA-graph safety: each grad-accum invocation reuses the captured
+            # graph region; mark the step so stale graph-output reads (e.g. RoPE
+            # cos/sin saved for backward) can't hit an overwritten pool. No-op
+            # when cudagraphs are disabled.
+            try:
+                torch.compiler.cudagraph_mark_step_begin()
+            except Exception:
+                pass
             try:
                 batch = next(train_iter)
             except StopIteration:
