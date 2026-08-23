@@ -84,29 +84,29 @@ if _HAS_TRITON:
     @triton.jit
     def mhc_pre_kernel(hpre_ptr, xf_ptr, u_ptr,
                        B: tl.constexpr, T: tl.constexpr, L: tl.constexpr, D: tl.constexpr,
-                       BLOCK_D: tl.constexpr):
+                       BLOCK_LD: tl.constexpr, BLOCK_D: tl.constexpr):
         """u[b,t,c] = sum_l hpre[b,t,l] * xf[b,t,l,c]   (einsum 'btn,btnc->btc').
-        Lane-loop: L iterations, each loading BLOCK_D elements (no BLOCK_LD needed)."""
+        BLOCK_LD = L * BLOCK_D (both power-of-2) with masking."""
         pid = tl.program_id(0)
         b = pid // T
         t = pid % T
         hpre = tl.load(hpre_ptr + b * T * L + t * L + tl.arange(0, L)).to(tl.float32)
+        offs_ld = tl.arange(0, BLOCK_LD)
+        mask_ld = offs_ld < L * D
+        xf = tl.load(xf_ptr + b * T * L * D + t * L * D + offs_ld,
+                     mask=mask_ld, other=0.0).to(tl.float32).reshape(L, BLOCK_D)
+        u = tl.sum(hpre[:, None] * xf, axis=0)
         offs_d = tl.arange(0, BLOCK_D)
         mask_d = offs_d < D
-        u = tl.zeros([BLOCK_D], dtype=tl.float32)
-        for l in tl.static_range(L):
-            xf_l = tl.load(xf_ptr + b * T * L * D + t * L * D + l * D + offs_d,
-                           mask=mask_d, other=0.0).to(tl.float32)
-            u += hpre[l] * xf_l
         tl.store(u_ptr + b * T * D + t * D + offs_d, u, mask=mask_d)
 
     @triton.jit
     def mhc_post_kernel(sink_in_ptr, xf_ptr, y_ptr, hpost_ptr, out_ptr,
                         B: tl.constexpr, T: tl.constexpr, L: tl.constexpr, D: tl.constexpr,
-                        ITERS: tl.constexpr, BLOCK_D: tl.constexpr):
+                        ITERS: tl.constexpr, BLOCK_LD: tl.constexpr, BLOCK_D: tl.constexpr):
         """Inline 20-iter Sinkhorn on sink_in, then
-        new_x[b,t,l,c] = sum_j hres[l,j]*xf[b,t,j,c] + hpost[l]*y[b,t,c]
-        (einsum 'btij,btjc->btic' + broadcast). Lane-loop over L."""
+        new_x[b,t,l,c] = sum_j hres[l,j]*xf[b,t,j,c] + hpost[l]*y[b,t,c].
+        BLOCK_LD = L * BLOCK_D (both power-of-2) with masking."""
         pid = tl.program_id(0)
         b = pid // T
         t = pid % T
@@ -122,15 +122,17 @@ if _HAS_TRITON:
             col_s = tl.sum(tl.exp(sk), axis=0)
             sk = sk - tl.log(col_s)[None, :]
         hres = tl.exp(sk)                                                 # (L,L)
+        offs_ld = tl.arange(0, BLOCK_LD)
+        mask_ld = offs_ld < L * D
+        xf = tl.load(xf_ptr + b * T * L * D + t * L * D + offs_ld,
+                     mask=mask_ld, other=0.0).to(tl.float32).reshape(L, BLOCK_D)  # (L,BLOCK_D)
         offs_d = tl.arange(0, BLOCK_D)
         mask_d = offs_d < D
         y = tl.load(y_ptr + b * T * D + t * D + offs_d, mask=mask_d, other=0.0).to(tl.float32)
         hpost = tl.load(hpost_ptr + b * T * L + t * L + tl.arange(0, L)).to(tl.float32)
-        for l in tl.static_range(L):
-            xf_l = tl.load(xf_ptr + b * T * L * D + t * L * D + l * D + offs_d,
-                           mask=mask_d, other=0.0).to(tl.float32)
-            new_x_l = tl.sum(hres[l, :, None] * xf_l[None, :], axis=1) + hpost[l] * y
-            tl.store(out_ptr + b * T * L * D + t * L * D + l * D + offs_d, new_x_l, mask=mask_d)
+        new_x = tl.sum(hres[:, :, None] * xf[None, :, :], axis=1) + hpost[:, None] * y[None, :]
+        tl.store(out_ptr + b * T * L * D + t * L * D + offs_ld,
+                 new_x.reshape(L * BLOCK_D), mask=mask_ld)
 
 
 class _MHC_PRE(torch.autograd.Function):
@@ -139,8 +141,9 @@ class _MHC_PRE(torch.autograd.Function):
         B, T, L, D = xf.shape
         u = torch.empty((B, T, D), dtype=torch.float32, device=xf.device)
         BLOCK_D = 1 << ((D - 1).bit_length())
+        BLOCK_LD = L * BLOCK_D
         mhc_pre_kernel[(B * T,)](hpre, xf, u, B=B, T=T, L=L, D=D,
-                                 BLOCK_D=BLOCK_D)
+                                 BLOCK_LD=BLOCK_LD, BLOCK_D=BLOCK_D)
         ctx.save_for_backward(hpre, xf)
         return u
 
@@ -160,9 +163,10 @@ class _MHC_POST(torch.autograd.Function):
         hres = triton_sinkhorn(sk_det)                  # non-diff, matches eager
         out = torch.empty((B, T, L, D), dtype=torch.float32, device=xf.device)
         BLOCK_D = 1 << ((D - 1).bit_length())
+        BLOCK_LD = L * BLOCK_D
         mhc_post_kernel[(B * T,)](sk_det, xf, y, hpost, out,
                                   B=B, T=T, L=L, D=D, ITERS=20,
-                                  BLOCK_D=BLOCK_D)
+                                  BLOCK_LD=BLOCK_LD, BLOCK_D=BLOCK_D)
         ctx.save_for_backward(hres, xf, y, hpost)
         return out
 
