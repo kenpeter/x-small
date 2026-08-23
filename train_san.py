@@ -16,6 +16,7 @@ from pathlib import Path
 import numpy as np
 import torch
 import torch.nn.functional as F
+torch.backends.cudnn.benchmark = True  # fixed shapes: pick fastest conv algo (engram taps)
 from torch.utils.data import DataLoader, Dataset, IterableDataset
 from transformers import AutoTokenizer
 
