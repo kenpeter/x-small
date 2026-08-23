@@ -20,7 +20,7 @@ import torch.nn.functional as F
 
 # Optional Triton accelerators (guarded — model works fine without triton).
 try:
-    from san_triton import triton_sinkhorn, mhc_pre, mhc_post
+    from san_triton import triton_sinkhorn, mhc_pre, mhc_post, fused_pre, fused_post
     _HAS_TRITON = True
 except Exception:
     _HAS_TRITON = False
@@ -477,25 +477,34 @@ class SimpleAttentionNetwork(nn.Module):
         B, T, lanes, d = X.shape
         nC = lanes * d
         cfg = self.cfg
-        xf = X.float()
-        nx = _rms_unit(X.reshape(B, T, nC))
-        hpre = torch.sigmoid(
-            self.a_pre[i] * (nx @ self.phi_pre[i].float()) + self.b_pre[i] + self._pre_off)
-        u = mhc_pre(hpre, xf).to(self.dtype)  # (B,T,d) fused lane-mix einsum
-
-        # engram site injection: full site stack + per-layer site_flags row
-        block_in = self.blocks[i](u, mask=mask, rope=rope,
-                                  engram_kv=engram_kv if engram_kv is not None else None,
-                                  site_flags=site_flags_i)
-        y = block_in - u  # block delta (B,T,d)
-
-        hpost = 2 * torch.sigmoid(
-            self.a_post[i] * (nx @ self.phi_post[i].float()) + self.b_post[i] + self._post_off)
-        res = nx @ self.phi_res[i].float()  # (B,T,L*L)
-        sink_in = self.a_res[i] * res.reshape(B, T, lanes, lanes) + self.b_res[i]
         if _HAS_TRITON:
-            new_x = mhc_post(sink_in, xf, y.float(), hpost).to(self.dtype)  # fused Sinkhorn+combine
+            # Fused routing: row-RMS + hpre/hpost/sink_in projections inside the
+            # Triton kernels; big kernels read bf16 X directly (cast in-register).
+            # Kills the X.float() temp, _rms_unit pass, and 3 small GEMMs per layer.
+            hpre = fused_pre(X, self.phi_pre[i], self.a_pre[i], self.b_pre[i], self._pre_off)
+            u = mhc_pre(hpre, X).to(self.dtype)  # (B,T,d) fused lane-mix einsum
+            block_in = self.blocks[i](u, mask=mask, rope=rope,
+                                      engram_kv=engram_kv if engram_kv is not None else None,
+                                      site_flags=site_flags_i)
+            y = block_in - u  # block delta (B,T,d)
+            hpost, sink_in = fused_post(X, self.phi_post[i], self.a_post[i], self.b_post[i],
+                                        self._post_off, self.phi_res[i], self.a_res[i],
+                                        self.b_res[i])
+            new_x = mhc_post(sink_in, X, y.float(), hpost).to(self.dtype)
         else:
+            xf = X.float()
+            nx = _rms_unit(X.reshape(B, T, nC))
+            hpre = torch.sigmoid(
+                self.a_pre[i] * (nx @ self.phi_pre[i].float()) + self.b_pre[i] + self._pre_off)
+            u = (torch.einsum("btn,btnc->btc", hpre, xf).to(self.dtype))
+            block_in = self.blocks[i](u, mask=mask, rope=rope,
+                                      engram_kv=engram_kv if engram_kv is not None else None,
+                                      site_flags=site_flags_i)
+            y = block_in - u  # block delta (B,T,d)
+            hpost = 2 * torch.sigmoid(
+                self.a_post[i] * (nx @ self.phi_post[i].float()) + self.b_post[i] + self._post_off)
+            res = nx @ self.phi_res[i].float()  # (B,T,L*L)
+            sink_in = self.a_res[i] * res.reshape(B, T, lanes, lanes) + self.b_res[i]
             hres = _sinkhorn(sink_in)
             new_x = (torch.einsum("btij,btjc->btic", hres, xf)
                      + hpost.unsqueeze(-1) * y.unsqueeze(2).float()).to(self.dtype)
