@@ -78,6 +78,48 @@ Components, 1:1 with needle `model/architecture.py`:
 | Heads | Tied embedding + causal/packing mask; contrastive/confidence heads |
 | Masks | `make_causal_mask`, `make_causal_packing_mask` (packing + sliding window) |
 
+### Simple text-flow diagram (forward pass)
+
+```
+tokens (B,T)
+   │
+   ▼
+Embedding (tied, 49152×384, × embed_scale)        ── x (B,T,384)
+   │
+   ▼
+Broadcast → 4 MHC lanes                           ── X (B,T,4,384)
+   │
+   ▼  ┌─ 27 × MHC layer (i = 0..26) ─────────────────────────────┐
+   │  │                                                        │
+   │  xf = X .float()                                          │
+   │  nx = RMS(X) over all lanes        (B,T,1536)             │
+   │  hpre = σ(a_pre·(nx@φ_pre) + b_pre)   [lane-mix gate]     │
+   │  u = Σ_l hpre[l]·xf[l]              (B,T,384)  ◄─ mhc_pre  │
+   │  │                                                       │
+   │  u ── Block[i]:                                           │
+   │      │  + Engram KV read        (fires only at L=2,15)    │
+   │      │  ZCRMSNorm → MHA (GQA+RoPE) → gate                 │
+   │      │  ZCRMSNorm → HadamardMLP (no dense FFN weights)    │
+   │      └─ y = block_out − u        (delta, B,T,384)         │
+   │  │                                                       │
+   │  hpost = 2σ(a_post·(nx@φ_post)+b_post)  [routing gate]    │
+   │  res = nx@φ_res → sink_in      (B,T,4,4)                  │
+   │  hres = Sinkhorn(sink_in, 20)                             │
+   │  new_x = hres·xf + hpost·y     ◄─ mhc_post (Triton)       │
+   │  │                                                       │
+   └── X = new_x ──────────────────────────────────────────────┘
+   │
+   ▼
+X.mean(lanes) → x (B,T,384)
+   │
+   ▼
+FinalNorm → tied logits (chunked over T) → main next-token CE
+   └─ MTP aux: x + emb(tok[t+1]) → 1 more block → t+2 logits
+```
+
+Lanes: 4 parallel residual streams; per layer `hpre` mixes inputs,
+`hres` (Sinkhorn) routes outputs — no dense per-lane FFNs.
+
 ### Config — the needle2 real preset (NOT `PRESETS["needle"]`)
 
 Inspecting the downloaded `needle2.pkl` (90.4MB, `~/work/needle2.pkl`) showed it
