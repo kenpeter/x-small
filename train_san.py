@@ -484,6 +484,9 @@ def main():
                     help="use DoReMi-lite G1-G4 stratified dynamic mix instead of flat farm")
     ap.add_argument("--no-checkpoint", action="store_true",
                     help="disable grad-checkpointing (MHC layers) — faster compute, more VRAM")
+    ap.add_argument("--ckpt-every", type=int, default=3,
+                    help="Checkmate-style: checkpoint every K-th MHC layer (default 3); "
+                         "1=all layers recomputed, larger K = more VRAM, less recompute")
     args = ap.parse_args()
 
     cfg = TrainConfig(
@@ -506,7 +509,8 @@ def main():
     san_cfg = SANConfig(vocab_size=cfg.vocab_size, d_model=cfg.d_model,
                         num_heads=cfg.num_heads, num_kv_heads=cfg.num_kv_heads,
                         num_layers=cfg.num_layers, max_seq_len=cfg.seq_len,
-                        use_checkpoint=cfg.use_checkpoint, dtype=cfg.dtype)
+                        use_checkpoint=cfg.use_checkpoint, dtype=cfg.dtype,
+                        ckpt_every=args.ckpt_every)
     model = SimpleAttentionNetwork(san_cfg).to(device)
     model.train()
     print(f"PARAMS: {model.count_parameters()/1e6:.2f}M")
