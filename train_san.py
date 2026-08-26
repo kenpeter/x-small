@@ -421,7 +421,7 @@ class TrainConfig:
     val_frac: float = 0.01
     batch_size: int = 4
     grad_accum: int = 8
-    max_steps: int = 50000
+    max_steps: int = 1000000  # 100w (100万) steps ≈ 49B tokens — full-run budget
     lr: float = 4e-4
     min_lr: float = 1e-4
     warmup_steps: int = 1000
@@ -481,7 +481,7 @@ def _compile_model(model):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--steps", type=int, default=50000)
+    ap.add_argument("--steps", type=int, default=1000000)
     ap.add_argument("--batch-size", type=int, default=None,
                    help="micro-batch size; default None -> 3 when compiling (12GB ceiling), "
                         "4 when eager (--no-compile). Override explicitly to set either.")
