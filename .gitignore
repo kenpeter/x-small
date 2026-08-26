@@ -8,3 +8,8 @@ runs/
 probe_mem*.py
 __pycache__/
 *.pyc
+
+# curriculum auto-backups + training logs
+curriculum_boost.json.bak-*
+run_*.log
+smoke*.log
