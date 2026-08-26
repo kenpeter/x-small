@@ -200,12 +200,24 @@ a large tax for a tiny model.
 | Curriculum + DoReMi, **18L/B=4 (current)** | **~16,700** @100W cap, 8134 MiB |
 | Flat farm, 18L/B=4 | higher |
 
+**Power-cap scaling (18L/B=4, 8134 MiB VRAM):** the SM clock is gated by the
+power cap, so tok/s scales with it. Measured live:
+
+| Power cap | SM clock | tok/s | Temp | Power draw |
+|-----------|----------|-------|------|------------|
+| 100W | 1200 MHz | ~16.5k | ~62°C | ~99W |
+| 150W | ~2000 MHz (est) | ~19k (est) | ~70°C (est) | ~150W |
+| 200W | 2685 MHz | ~22k | ~78°C | ~193W |
+
+Set via `sudo nvidia-smi -pl N` (resets to ~285W default on reboot). 200W =
+faster but hotter; 100W = cool.
+
 Both clear 15k with **no torch revert**. Steady-state confirmed live after resume
 from `san_latest.pt` (step 52000).
 
 **Operational notes:**
 - `--no-checkpoint` is **not** a lever — at B=3 it OOMs at 11.84 GiB on torch 2.11.
-- Larger batch (B=4) **now works** with **full grad-ckpt** (ckpt_every=1 → recompute every layer) → 8134 MiB, no OOM. `--num-layers N` (e.g. 18) shrinks the model and is **resume-safe** via `_resume_load` (slices MHC per-layer params to [:N], ignores extra blocks; optimizer reinitialized). 18L + B=4 = ~16,700 tok/s @100W cap.
+grad-ckpt (ckpt_every=1) → 8134 MiB, no OOM. `--num-layers N` (e.g. 18) shrinks the model and is **resume-safe** via `_resume_load` (slices MHC per-layer params to [:N], ignores extra blocks; optimizer reinitialized). 18L + B=4 = ~16,700 tok/s @100W cap, **~22k tok/s @200W cap**.
 - Resume cmd: `cd /home/kenpeter/work/x-small && HF_HUB_OFFLINE=1
   TRANSFORMERS_OFFLINE=1 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
   CUDA_VISIBLE_DEVICES=0 venv_xsmall/bin/python -u train_san.py --resume
