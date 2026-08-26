@@ -89,7 +89,7 @@ Embedding (tied, 49152×384, × embed_scale)        ── x (B,T,384)
    ▼
 Broadcast → 4 MHC lanes                           ── X (B,T,4,384)
    │
-   ▼  ┌─ 27 × MHC layer (i = 0..26) ─────────────────────────────┐
+   ▼  ┌─ N × MHC layer (i = 0..N-1)  — N=27 default, **18 active** ──┐
    │  │                                                        │
    │  xf = X .float()                                          │
    │  nx = RMS(X) over all lanes        (B,T,1536)             │
@@ -132,7 +132,7 @@ estimates were off. Real config:
 | d_model | **384** (shrunk from 512 to hit ~45M at 49k vocab) |
 | num_heads | 8 |
 | num_kv_heads | 4 |
-| num_layers | 27 |
+| num_layers | 27 (default; **live run uses 18** via `--num-layers` for throughput) |
 | max_seq_len | 2048 |
 | engram_layers | (2, 15) — engram_heads 2, orders (2,3), sub_dim 128, tables 4, slots 8192 |
 | MHC | 4 lanes (phi 27×2048×4, res 27×2048×16, b 27×4 / 27×4×4) |
@@ -161,7 +161,7 @@ forward+MTP+backward on GPU, ~3GB VRAM @ seq 512 (fits 12GB at full 2048×b32).
 - Verified **running on GPU (cuda:0, RTX 4070 Ti)**: loss 11.97→11.91→11.70 over 30 steps, ~2.5–3.0k tok/s @ batch 1 / seq 512. Full curriculum run launched at **~11.6k tok/s** (eager), batch 4 × accum 8, seq 2048 — loss ~2.9 @ step 50260.
 - Config defaults: batch 4 × accum 8 = eff 32, seq 2048, lr 4e-4 cos→1e-4, warmup 1000, save_every 2000, val_frac 0.01, **checkpoint-dir `/home/kenpeter/work/x-small/checkpoints/san`** (`san_latest.pt`, latest-only — never best.pt). Launch flags: `--curriculum --dedup` (stratified domain-tiered sampler + dedupe). Runs **with** per-layer `torch.compile` (mode=`default`, checkpoint-preserving); do **not** pass `--no-compile` — eager leaves ~30% throughput on the table (see Throughput section below).
 - **Compile-mask graph break (`san_model.py`)** — `MultiHeadAttention.forward` compared masks via `torch.equal(mask, causal_ref)` (data-dependent → torch.compile graph-break + crash when the curriculum mask changes per batch). Fixed: identity check `mask is causal_ref` against a **cached causal mask** (`_causal_mask_cache` dict + `_get_causal_mask()`); `_hidden()` and `compute_loss()` now pull the cached mask from `blocks[0].attn` / `mtp_block.attn` instead of `make_causal_mask(...)`. Compile-safe in principle.
-- **torch.compile HANGS (autotune tax pathological)** — with the mask fix, `torch.compile` still never finishes inductor autotune (>7 min wall, 0% GPU, no `✅ compiled compute_loss` line) on this 27-layer + MTP + engram + Triton-Sinkhorn model. Compiled mode was ~15k tok/s (vs ~11.6k eager) but is **unreachable**. Decision: run **`--no-compile` (eager)** — reliable for this small model; the autotune tax isn't worth it.
+- **torch.compile HANGS (autotune tax pathological)** — with the mask fix, `torch.compile` still never finishes inductor autotune (>7 min wall, 0% GPU, no `✅ compiled compute_loss` line) on this 27-layer + MTP + engram + Triton-Sinkhorn model. Compiled mode was ~15k tok/s (vs ~11.6k eager) but is **unreachable**. Decision at the time: run **`--no-compile` (eager)** — but see the stale-note below: compiling *per-layer* (`_compile_model`, mode=`default`) actually works and is the operational mode; the whole-`compute_loss` compile was the part that hung.
 
 > **⚠️ Stale note — corrected 2026-08-26:** the per-layer `torch.compile` path
 > (`_compile_model`, mode=`default`) **does** work and is the operational mode.
@@ -169,7 +169,7 @@ forward+MTP+backward on GPU, ~3GB VRAM @ seq 512 (fits 12GB at full 2048×b32).
 > each block forward (checkpoint-preserving) gives 0 recompiles and the 15k+
 > result below. Do **not** run `--no-compile` for production.
 
-### Throughput — how we reached 15k+ tok/s (2026-08-26)
+### Throughput — reaching 16k+ tok/s (2026-08-26)
 
 **Myth busted:** the 15k number was *not* a torch-version artifact, and CUDA
 graphs / `max-autotune` do **not** help here. The model is 43.85M params in
@@ -244,7 +244,7 @@ domain-tiered sampler ported from small) is stubbed/planned but not yet wired.
 ## Status & Pending
 
 ✅ Done: SAN port (45.21M @ needle2-exact / **43.85M @ 49152 current**),
-~45M scale locked (d_model 384, 27L — user rejected 135M/66M).
+~45M scale locked (d_model 384 — user rejected 135M/66M; `num_layers` default 27, live run uses **18** for throughput).
 
 ✅ GPU optimization (`ad2b800`): **Triton Sinkhorn** (1.13→0.095ms, 12×, parity
 2.4e-7), **flash SDPA attention** (kills the (B,H,T,T) fp32 OOM), **grad
@@ -260,6 +260,14 @@ restart); `curriculum_boost.json` hot-reload with code-dominant boost
 (code_easy 21×, code_medium 12×, code_hard 21×, code_gold 10×) for the exam-style
 code-pass goal. Verified: 16 sources, resume-from-latest, 34k tok/s.
 
+✅ **15k→16.7k tok/s + layer reduction + resume-safe** (2026-08-26): killed the
+`.item()` sync storm (see Throughput), then shrank 27→**18 layers** via
+`--num-layers 18` — resume-safe through `_resume_load` (slices MHC per-layer
+params to [:N], ignores extra blocks; optimizer reinitialized). B=4 forces full
+grad-ckpt (ckpt_every=1) → 8134 MiB. Live run resumed from `san_latest.pt` (step
+52000) at **~16,700 tok/s @100W cap** (+40% vs 27L/B=3). Engram fusion deferred
+(low ROI — Sinkhorn already Triton-fused at `san_model.py:504`).
+
 ✅ **Real curriculum run LAUNCHED** (2026-08-26): `--curriculum --dedup
 --no-compile`, batch 4 × accum 8, seq 2048, `--checkpoint-dir
 /home/kenpeter/work/x-small/checkpoints/san`, `--save-every 2000`,
@@ -274,8 +282,7 @@ mask — see Training section. Note: torch.compile *still hangs* on autotune for
 this model, so **`--no-compile` (eager) is the operational mode**.
 
 🔜 Pending:
-1. **Relaunch training** — `--curriculum --dedup --no-compile`, same checkpoint-dir; resume from `san_latest.pt`. Currently down (killed in compile test). Keep `--curriculum` on relaunch (else stale cron) + SIGTERM-safe restart.
-2. **Investigate torch.compile hang** (low priority) — inductor autotune never finishes (>7 min, 0% GPU) on 27L+MTP+engram. Options: `mode="reduce-overhead"`, disable autotune, or accept eager (~11.6k vs ~15k compiled). Eager is stable; skip unless 15k matters.
-3. **Hermes agent-1 config (needs `hermes gateway restart`, user shell)**: default model switched `hy3-free → nemotron-3-ultra-free` (bigger context → less compression needed); compression loosened (`threshold 0.8`, `target_ratio 0.5`, `protect_last_n 40`). Not yet active until gateway restart.
-4. **Eval** trained SAN on code/math prompts.
-5. Housekeeping: `token_rotation_test.py` committed with tokens redacted (HF tokens removed — were in git, push-protection flagged).
+1. **Engram fusion** (deferred) — Sinkhorn already Triton-fused (`san_model.py:504`); Engram (`san_model.py:174`) only fires at layers 2,15, so a custom fused gather+matmul kernel is low-ROI. Implement only if more headroom is needed.
+2. **Eval** trained SAN (18L) on code/math prompts.
+3. **Lift 100W power cap** for more tok/s (heat trade) — optional; currently capped via `nvidia-smi -pl 100` (resets on reboot).
+4. **Hermes agent-1 model config** — default switched to `hy3-free` (was `mimo-v2.5-free`); active after gateway restart.
