@@ -493,7 +493,8 @@ def main():
     ap.add_argument("--log-every", type=int, default=10,
                    help="log a training line every N steps")
     ap.add_argument("--data-dir", default="/home/kenpeter/work/data/_shards_final")
-    ap.add_argument("--checkpoint-dir", default="/home/kenpeter/work/checkpoints/xsmall_san")
+    ap.add_argument("--checkpoint-dir", default="/home/kenpeter/work/x-small/checkpoints/san",
+                   help="per user rule: checkpoints live INSIDE the project dir, not /work/checkpoints")
     ap.add_argument("--save-every", type=int, default=2000)
     ap.add_argument("--resume")
     ap.add_argument("--curriculum", action="store_true",
