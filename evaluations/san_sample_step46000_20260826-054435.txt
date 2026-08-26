@@ -1,0 +1,110 @@
+SAN (x-small) SAMPLED EVAL | step=46000 params=43.85M device=cuda
+decode: temp=0.8 top_k=40 top_p=0.9 max_new=120
+training loss @ckpt = 16.34127253293991
+========================================================================
+
+### [knowledge] prompt: 'The capital of France is'
+ the world-ENTIAL, a capital of one of the leading leading powers. The capital of France is the capital of the other countries and the capital of the United States is the capital of the other nations. The capital of France is the capital of the other countries and the capital of the United States is the capital of the other nations.
+The capital of France is the capital of the other countries and the capital of the United States is the capital of the other nations. The capital of France is the capital of the other countries and the capital of the United States is the capital of the other countries.
+
+### [knowledge] prompt: 'Albert Einstein is best known for'
+ the theory of the relativity of the universe, even if it is the most famous and best known of the 1970s. A 1970-2010 A 1970-2010 A 1970-2011 A 1970-2012 A 1970-2012 A 1970-2013 A 1970-2012 A 1970-2011 A 19
+
+### [code-py] prompt: 'def quicksort(arr):'
+
+    return arr.sum(arr)
+```
+
+    
+    1.size = 128
+2. retain(i16) (i16, i26) (i36, i47)
+3. retain(i64, i76) (i76, i88, i96)
+4. retain(i96, i16, i26) (i16, i16, i26)
+
+By using the above above, the array of arr is sorted. The
+
+### [code-py] prompt: 'import numpy as np\n\ndef moving_average(x, window):'
+
+    x = np.mean(x.mean)
+    window = np.flat[x.shape[0]]
+    x = 0.0
+    return np.flat[x.shape[0]]
+
+def time_time(x, window):
+    x = np.zeros((x.shape[0]), dtype=float)
+    window = np.flat[x.shape[0]]
+    x = 0.0
+    return np.flat[x.shape[0]]
+
+def _get_time_time(time_time):
+    return time
+
+### [code-js] prompt: '// JavaScript: fetch JSON from an API and log it\n'
+// Copyright (c) 2003-2017 by Jeroen Bragg <jeroen@boy.net>
+
+
+package org.jeroen.boy.model;
+
+import java.io.File;
+import java.io.FileOutputStream;
+
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+public class NullResourceTest {
+
+    @Test
+    public void testGetResource() throws Exception
+
+### [math] prompt: 'Solve for x: 2x + 5 = 13. The answer is x ='
+ 13.
+
+Solving for 2:
+
+x = 2x + 1 = 23.
+
+Now, the answer is 23.
+
+So, the answer is 23.
+
+Solve for x:
+
+x = 2x + 5 = 23.
+
+So, the answer is 23.
+
+Solve for x:
+
+x = 2x + 1 = 23.
+
+So, the answer is 23.
+
+Solve for
+
+### [reasoning] prompt: "The opposite of 'happy' is"
+ the answer.
+
+A friend who has bought the next square takes his friend to win, with only 1 apple.
+
+The winner has to do with the sum of the squares of the apples in each apple, 1 apple, and 2 apple.
+
+The next square takes only 1 apple, 1 apple, and 2 apple.
+
+When the remainder of a number between 1 and 9 is 3, the sum of the squares of the apples in each apple is 3 + 2 + 2 = 19.
+
+The
+
+### [open] prompt: 'Write a short poem about the ocean:'
+
+
+(a) It is a poem that tells the world that the earth is the world, and that it is the human body, and that it is the human body.)
+
+(b) It is a poem that tells the world that the ocean is the world, and that it is the human body.
+
+(c) It is a poem that tells the world that the ocean is the world, and that it is the human body.
+
+(d) It is a poem that tells the world that the ocean is the world, and that it is the human body.
+========================================================================
+SAVED -> evaluations/san_sample_step46000_20260826-054435.txt

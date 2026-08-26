@@ -69,7 +69,7 @@ def build_dataloader(cfg, is_val=False):
     ds = BinShardDataset(Path(cfg.data_dir), cfg.seq_len, cfg.val_frac, is_val)
     return DataLoader(ds, batch_size=cfg.batch_size, shuffle=False,
                       num_workers=8, pin_memory=True,
-                      persistent_workers=True, prefetch_factor=4), ds
+                      persistent_workers=False, prefetch_factor=4), ds
 
 
 # ============================================================================
@@ -366,7 +366,7 @@ def build_curriculum_dataloader(cfg, is_val=False, ratios=None):
                                 ratios=ratios, dedup=cfg.dedup)
     dl = DataLoader(ds, batch_size=cfg.batch_size, shuffle=False,
                     collate_fn=_collate_curriculum, num_workers=8, pin_memory=True,
-                    persistent_workers=True, prefetch_factor=4)
+                    persistent_workers=False, prefetch_factor=4)
     return dl, ds
 
 
@@ -440,6 +440,13 @@ class TrainConfig:
 
 
 def _compile_model(model):
+    # Force memory-efficient SDP backends: the packing/curriculum mask path must use
+    # block-wise attention (no (B,H,T,T) materialization). Set process-global BEFORE
+    # torch.compile -- the sdpa_kernel() context manager is dropped inside a compiled
+    # graph, but these global flags are honored at runtime dispatch.
+    torch.backends.cuda.enable_math_sdp(False)
+    torch.backends.cuda.enable_mem_efficient_sdp(True)
+    torch.backends.cuda.enable_flash_sdp(True)
     """Compile for max throughput (Triton-backed inductor). Falls back gracefully.
 
     Mode chain: default -> max-autotune-no-cudagraphs -> eager.
@@ -458,6 +465,7 @@ def _compile_model(model):
         try:
             model.compute_loss = torch.compile(model.compute_loss,
                                                dynamic=False, mode=mode)
+            model._compiled = True
             print(f"  ✅ compiled compute_loss mode={mode}")
             return model
         except Exception as e:
@@ -616,11 +624,11 @@ def main():
                 x, y = batch
             x, y = x.to(device), y.to(device)
             out = san_loss(model, x, y, cfg.mtp_weight)
-            loss, main_ce, mtp_ce = out  # loss=tensor (backward), main/mtp=floats
+            loss, main_ce, mtp_ce = out  # loss=tensor (backward), main/mtp=detached tensors
             loss = loss / cfg.grad_accum
             acc_loss += loss.item() * cfg.grad_accum
-            acc_main += (main_ce if main_ce else 0.0)
-            acc_mtp += (mtp_ce if mtp_ce else 0.0)
+            acc_main += main_ce.item()
+            acc_mtp += mtp_ce.item()
             if isinstance(batch, dict) and batch.get("domains") is not None:
                 _dom = batch["domains"][0]
                 acc_dom_loss[_dom] = acc_dom_loss.get(_dom, 0.0) + loss.item() * cfg.grad_accum

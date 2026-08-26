@@ -1,0 +1,115 @@
+SAN (x-small) EVAL  |  step=46000  params=43.85M  device=cuda
+training loss @ckpt = 16.34127253293991
+state_dict check: missing=0 unexpected=0
+========================================================================
+GREEDY GENERATION (real prompts):
+
+### [knowledge] prompt: 'The capital of France is'
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is
+
+### [knowledge] prompt: 'Albert Einstein is best known for'
+    Albert Einstein is best known for his work in the field of relativity.
+
+    The theory of relativity is a very important topic in physics. It is the theory of relativity, and it is the theory of relativity.
+
+    The theory of relativity is a very important topic in physics. It is the theory of relativity. It is the theory of relativity.
+
+    The theory of relativity is a very important topic in physics. It is the theory of relativity. It is the theory of relativity.
+
+    The theory of relativity is a very important topic in physics. It is the theory of relativity. It is the theory of relativity
+
+### [code-py] prompt: 'def quicksort(arr):'
+    def quicksort(arr):
+        return arr.sum(arr)
+    ```
+    
+        1. Iterate through n binary arrays.
+    2. For each integer x, check if x is even:
+       a. If no even:
+         - If even:
+         - If odd:
+         - If odd:
+         - If odd and then odd, decrement the count
+         - If odd is less than or equal to n/2 (it means x is even).
+       b. Add the count to the result, and repeat the process.
+    3. Return the final result as the number of valid numbers.
+    
+
+
+### [code-py] prompt: 'import numpy as np\n\ndef moving_average(x, window):'
+    import numpy as np
+
+    def moving_average(x, window):
+        """
+        Return the average of the average of the two points in the window.
+        """
+        return (x - window) * (x - window) * (x - window) * (x - window) * (x - window)
+
+        return (x - window) * (x - window) * (x - window) * (x - window) * (x - window) * (x - window)
+
+        def __init__(self, x, window):
+            """
+            Initialize the initial state of the window.
+            """
+            self.window = window
+            self.
+
+### [code-js] prompt: '// JavaScript: fetch JSON from an API and log it\n'
+    // JavaScript: fetch JSON from an API and log it
+    //
+    // Copyright (c) 2006-2011, Knut Reinert, FU Berlin
+    //
+    // All rights reserved.
+    //
+    // Redistribution and use in source and binary forms, with or without
+    // modification, are permitted provided that the following conditions are met:
+    //
+    //     * Redistributions of source code must retain the above copyright
+    //       notice, this list of conditions and the following disclaimer.
+    //     * Redistributions in binary form must reproduce the above copyright
+    //       notice, this list of conditions and the
+
+### [math] prompt: 'Solve for x: 2x + 5 = 13. The answer is x ='
+    Solve for x: 2x + 5 = 13. The answer is x = 13.
+
+    ## SIMILAR QUESTIONS
+    VARIANT 1  
+    A robot starts at 0.5 m and starts at 0.5 m clockwise. What is the minimum distance it can travel to the robot?  
+    A car starts at 0.5 m clockwise. What is the minimum distance it can travel to the robot?  
+    A car starts at 0.5 m clockwise. What is the minimum distance it can travel to the robot?  
+    A car starts at 0.5 m clockwise. What is the minimum distance
+
+### [reasoning] prompt: "The opposite of 'happy' is"
+    The opposite of 'happy' is 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+
+### [open] prompt: 'Write a short poem about the ocean:'
+    Write a short poem about the ocean:
+
+    The ocean is a large, unliteral, and is composed of several different parts of the ocean. The ocean is composed of several different parts of the ocean, including the ocean's surface, the ocean's surface, and the ocean's surface. The ocean is composed of several different parts of the ocean, including the ocean's surface, the ocean's surface, and the ocean's surface. The ocean is composed of several different parts of the ocean, including the ocean's surface, the ocean's surface, and the ocean's surface. The ocean is composed of several different parts of the
+
+========================================================================
+PERPLEXITY on real passages (lower = better):
+  [prose   ] loss=4.794  ppl=120.80
+  [code    ] loss=3.269  ppl=26.27
+  [math    ] loss=3.694  ppl=40.19
+  mean ppl = 62.42

@@ -1,0 +1,114 @@
+SAN (x-small) EVAL  |  step=14000  params=43.85M  device=cuda
+training loss @ckpt = 13.990978240966797
+state_dict check: missing=0 unexpected=0
+========================================================================
+GREEDY GENERATION (real prompts):
+
+### [knowledge] prompt: 'The capital of France is'
+    The capital of France is 100,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000
+
+### [knowledge] prompt: 'Albert Einstein is best known for'
+    Albert Einstein is best known for the theory of the universe.
+
+    The theory of the universe is a very simple and powerful method of understanding the universe. It is a method of understanding the universe, which is the process of understanding the universe.
+
+    The theory of the universe is a method of understanding the universe. It is a method of understanding the universe. It is a method of understanding the universe. It is a method of understanding the universe.
+
+    The theory of the universe is a method of understanding the universe. It is a method of understanding the universe. It is a method of understanding the universe. It is
+
+### [code-py] prompt: 'def quicksort(arr):'
+    def quicksort(arr):
+        return arr.count(arr.count(arr.count(arr.count(arr.count(arr.count(arr.count(arr.count(arr.count(arr.count(arr.count(arr.count(arr.count(arr.count(arr.count(arr.count(arr.count(arr.count(arr.count(arr.count(arr.count(arr.count(arr.count(arr.count(arr.count(arr.count(arr.count(arr.count(arr.count(arr.
+
+### [code-py] prompt: 'import numpy as np\n\ndef moving_average(x, window):'
+    import numpy as np
+
+    def moving_average(x, window):
+        """
+        Return the average of the average of the given x and window.
+        """
+        return x.average(window)
+
+    def average_average(x, window):
+        """
+        Return the average of the average of the given x and window.
+        """
+        return x.average(window)
+
+    def average_average(x, window):
+        """
+        Return the average of the average of the given x and window.
+        """
+        return x.average(window)
+
+    def average_average(x, window):
+        """
+        Return the average of the average
+
+### [code-js] prompt: '// JavaScript: fetch JSON from an API and log it\n'
+    // JavaScript: fetch JSON from an API and log it
+    //
+    // The default implementation is to be used to create a JSON object.
+    //
+    // The default implementation is to be used to create a JSON object.
+    //
+    // The default implementation is to be used to create a JSON object.
+    //
+    // The default implementation is to be used to create a JSON object.
+    //
+    // The default implementation is to be used to create a JSON object.
+    //
+    // The default implementation is to be used to create a JSON object.
+    //
+    // The default implementation is to be used to create a JSON object.
+    //
+
+### [math] prompt: 'Solve for x: 2x + 5 = 13. The answer is x ='
+    Solve for x: 2x + 5 = 13. The answer is x = 2x + 5.
+
+    ## SIMILAR
+
+    • 2x + 5 = 13.
+    • 5x + 5 = 13.
+    • 13.
+
+    ## SIMILAR
+
+    • 2x + 5 = 13.
+    • 5x + 5 = 13.
+    • 13.
+
+    ## SIMILAR
+
+    • 2x + 5 = 13.
+    • 5x + 5 = 13.
+    •
+
+### [reasoning] prompt: "The opposite of 'happy' is"
+    The opposite of 'happy' is the same as the 'happy' and 'happy' and the 'happy' and 'happy' are the same.
+
+    Given a string `s` containing only lowercase English letters, return _the number of ways to pick an empty string_ `(i, j)` _with_ `s`.
+
+    **Example 1:**
+
+    **Input:** s =  "eetet "
+    **Output:** 1
+    **Explanation:** The  "eetet " can be  "eet " =  "leet " which is a good string.
+
+    **
+
+### [open] prompt: 'Write a short poem about the ocean:'
+    Write a short poem about the ocean:
+
+    The ocean is a beautiful and beautiful piece of the ocean that is a beautiful and beautiful piece of the ocean. It is a beautiful and beautiful piece of the ocean that is a beautiful and beautiful piece of the ocean.
+
+    The ocean is a beautiful and beautiful piece of the ocean that is a beautiful and beautiful piece of the ocean. It is a beautiful and beautiful piece of the ocean that is a beautiful and beautiful piece of the ocean.
+
+    The ocean is a beautiful and beautiful piece of the ocean that is a beautiful and beautiful piece of the ocean. It is a beautiful and beautiful
+
+========================================================================
+PERPLEXITY on real passages (lower = better):
+  [prose   ] loss=5.035  ppl=153.74
+  [code    ] loss=3.141  ppl=23.12
+  [math    ] loss=4.052  ppl=57.53
+  mean ppl = 78.13

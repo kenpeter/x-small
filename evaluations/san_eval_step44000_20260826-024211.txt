@@ -1,0 +1,153 @@
+SAN (x-small) EVAL  |  step=44000  params=43.85M  device=cuda
+training loss @ckpt = 16.363242089748383
+state_dict check: missing=0 unexpected=0
+========================================================================
+GREEDY GENERATION (real prompts):
+
+### [knowledge] prompt: 'The capital of France is'
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is
+
+### [knowledge] prompt: 'Albert Einstein is best known for'
+    Albert Einstein is best known for his work in the field of relativity.
+
+    The theory of relativity is a very important topic in physics. It is the theory of relativity, and it is the theory of relativity.
+
+    The theory of relativity is a very important topic in physics. It is the theory of relativity. It is the theory of relativity.
+
+    The theory of relativity is a very important topic in physics. It is the theory of relativity. It is the theory of relativity.
+
+    The theory of relativity is a very important topic in physics. It is the theory of relativity. It is the theory of relativity
+
+### [code-py] prompt: 'def quicksort(arr):'
+    def quicksort(arr):
+        """
+        This function returns the number of rows in the array.
+        """
+        return arr.count(arr)
+
+    class Rect:
+        """
+        A class for storing the rows in the array.
+        """
+        def __init__(self, rows):
+            self.rows = rows
+            self.cols = len(self.rows)
+            self.cols = len(self.cols)
+
+        def __iter__(self):
+            return self.rows
+
+        def __iter__(self):
+            return self.cols
+
+        def __set__(self, row):
+            self.rows[row
+
+### [code-py] prompt: 'import numpy as np\n\ndef moving_average(x, window):'
+    import numpy as np
+
+    def moving_average(x, window):
+        """
+        Return the average of the average of the two points in the
+        `x` and `window`.
+
+        Parameters
+        ----------
+        x : float
+            The `x` or `window` to the left of the `x` or `window`
+        window : float
+            The `window` to the right of the `x` or `window`
+        window_type : str or tuple
+            The type of the `x` or `window` to the left of the `x` or `window`
+        """
+        return x.mean(window)
+
+    def average_
+
+### [code-js] prompt: '// JavaScript: fetch JSON from an API and log it\n'
+    // JavaScript: fetch JSON from an API and log it
+    //
+    // Copyright (c) 2006-2012, Knut Reinert, FU Berlin.
+    // All rights reserved.
+    //
+    // Redistribution and use in source and binary forms, with or without
+    // modification, are permitted provided that the following conditions are
+    // met:
+    //
+    // * Redistributions of source code must retain the above copyright
+    // notice, this list of conditions and the following disclaimer.
+    //
+    // * Redistributions in binary form must reproduce the above
+    // copyright notice, this list of conditions and the following
+
+### [math] prompt: 'Solve for x: 2x + 5 = 13. The answer is x ='
+    Solve for x: 2x + 5 = 13. The answer is x = 13.
+
+    ## SIMILAR QUESTIONS
+    VARIANT 1  
+    A student is given a 2D array of integers, where each element is an integer in the range [1, 2, 3]. The answer is 2x + 5 = 13.  
+
+    Example 1:  
+    Input: nums = [2,3,4,5]  
+    Output: 1  
+    Explanation: The answer is [2,3,4,5]  
+    The answer is [2,3,4,
+
+### [reasoning] prompt: "The opposite of 'happy' is"
+    The opposite of 'happy' is the number of good good good good good.
+
+    Example 1:
+
+    Input: s = "leetcode"
+    Output: 2
+    Explanation: The reverse operation is 2.
+
+    Example 2:
+
+    Input: s = "leetcode"
+    Output: 0
+    Explanation: The reverse operation is 0.
+
+    Example 3:
+
+    Input: s = "aa"
+    Output: 0
+    Explanation: The reverse operation is 0.
+
+ 
+    Constraints:
+
+    1 <= s.length <= 105
+
+
+### [open] prompt: 'Write a short poem about the ocean:'
+    Write a short poem about the ocean:
+
+    The ocean is a large, unliteral, and is composed of several different parts of the ocean. The ocean is composed of several different parts of the ocean, including the ocean's surface, the ocean's surface, and the ocean's surface. The ocean is composed of several different parts of the ocean, including the ocean's surface, the ocean's surface, and the ocean's surface. The ocean is composed of several different parts of the ocean, including the ocean's surface, the ocean's surface, and the ocean's surface. The ocean is composed of several different parts of the
+
+========================================================================
+PERPLEXITY on real passages (lower = better):
+  [prose   ] loss=4.730  ppl=113.31
+  [code    ] loss=3.182  ppl=24.09
+  [math    ] loss=3.697  ppl=40.33
+  mean ppl = 59.24

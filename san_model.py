@@ -545,7 +545,10 @@ class SimpleAttentionNetwork(nn.Module):
             # Checkmate-style selective checkpointing: checkpoint only every
             # ckpt_every-th layer (recomputed in backward); intermediate layers
             # keep activations in VRAM — we have ~8.7GB free at B=4 S=2048.
-            if cfg.use_checkpoint and self.training and i % cfg.ckpt_every == 0:
+            # When compiled, checkpoint EVERY layer: torch.compile defeats partial
+            # checkpointing (all layers' activations get retained -> OOM on 12GB).
+            if cfg.use_checkpoint and self.training and (
+                    getattr(self, '_compiled', False) or i % cfg.ckpt_every == 0):
                 new_x = torch.utils.checkpoint.checkpoint(
                     self._mhc_step, i, X, mask, rope, engram_kv, site_i, use_reentrant=False)
             else:
@@ -604,7 +607,7 @@ class SimpleAttentionNetwork(nn.Module):
         main_ce = tot / cnt.clamp(min=1)
 
         if mtp_weight <= 0:
-            return main_ce, float(main_ce.item()), 0.0
+            return main_ce, main_ce.detach(), torch.zeros_like(main_ce).detach()
 
         # MTP: m[t] predicts y[t+1]; iterate m-positions 0..T-2
         # Use cached causal mask from MTP block's attention for torch.compile compatibility
@@ -626,7 +629,7 @@ class SimpleAttentionNetwork(nn.Module):
             cnt2 += (tgt != -100).sum()
         mtp_ce = tot2 / cnt2.clamp(min=1)
         loss = main_ce + mtp_weight * mtp_ce
-        return loss, float(main_ce.item()), float(mtp_ce.item())
+        return loss, main_ce.detach(), mtp_ce.detach()
 
     def count_parameters(self):
         return sum(p.numel() for p in self.parameters())

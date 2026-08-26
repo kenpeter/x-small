@@ -1,0 +1,135 @@
+SAN (x-small) EVAL  |  step=30000  params=43.85M  device=cuda
+training loss @ckpt = 17.030868887901306
+state_dict check: missing=0 unexpected=0
+========================================================================
+GREEDY GENERATION (real prompts):
+
+### [knowledge] prompt: 'The capital of France is'
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is
+
+### [knowledge] prompt: 'Albert Einstein is best known for'
+    Albert Einstein is best known for his work in the field of physics. He is a member of the Royal Royal Society of London, where he is a member of the Royal Royal Society of London.
+
+    ## The Royal Royal Society
+
+    The Royal Royal Society is a member of the Royal Royal Society of London. The Royal Royal Society is a member of the Royal Royal Society of London.
+
+    ## The Royal Royal Society
+
+    The Royal Royal Society is a member of the Royal Royal Society of London. The Royal Royal Society is a member of the Royal Royal Society of London.
+
+    ## The Royal Royal Society
+
+
+
+### [code-py] prompt: 'def quicksort(arr):'
+    def quicksort(arr):
+        n = len(arr)
+        min_arr = [0] * n
+        arr[n] = arr[n+1] = 0
+
+        for i in range(1, n+1):
+            min_arr[arr[i]] = arr[i]
+
+        min_arr = [0] * n
+        min_arr[0] = arr[0]
+
+        for i in range(1, n+1):
+            min_arr[arr[i]] = min_arr[arr[i-1]]
+
+        min_arr[0] =
+
+### [code-py] prompt: 'import numpy as np\n\ndef moving_average(x, window):'
+    import numpy as np
+
+    def moving_average(x, window):
+        """
+        Return the average average of the input data.
+        """
+        return np.sum(x.shape[0], window)
+
+    def average_average(x, window):
+        """
+        Return the average average of the input data.
+        """
+        return np.sum(x.shape[0], window)
+
+    def average_average(x, window):
+        """
+        Return the average average of the input data.
+        """
+        return np.sum(x.shape[0], window)
+
+    def average_average(x, window):
+        """
+   
+
+### [code-js] prompt: '// JavaScript: fetch JSON from an API and log it\n'
+    // JavaScript: fetch JSON from an API and log it
+    //
+    // Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+    //
+    // This program is free software; you can redistribute it and/or modify
+    // it under the terms of the GNU General Public License version 2 and
+    // only version 2 as published by the Free Software Foundation.
+    //
+    // This program is distributed in the hope that it will be useful,
+    // but WITHOUT ANY WARRANTY; without even the implied warranty of
+    // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    //
+
+### [math] prompt: 'Solve for x: 2x + 5 = 13. The answer is x ='
+    Solve for x: 2x + 5 = 13. The answer is x = 13.
+
+    Solving for x: 2x + 5 = 13.
+
+    Solving for x: 2x + 5 = 13.
+
+    Solving for x: 2x + 5 = 13.
+
+    Solving for x: 2x + 5 = 13.
+
+    Solving for x: 2x + 5 = 13.
+
+    Solving for x: 2x + 5 = 13.
+
+    Solving for x: 
+
+### [reasoning] prompt: "The opposite of 'happy' is"
+    The opposite of 'happy' is 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+
+### [open] prompt: 'Write a short poem about the ocean:'
+    Write a short poem about the ocean:
+
+    The ocean is a beautiful ocean with many different parts of the world. It is a beautiful ocean with many different parts of the world. It is a beautiful ocean with many different parts of the world.
+
+    The ocean is a beautiful ocean with many different parts of the world. It is a beautiful ocean with many different parts of the world. It is a beautiful ocean with many different parts of the world.
+
+    The ocean is a beautiful ocean with many different parts of the world. It is a beautiful ocean with many different parts of the world. It is a beautiful ocean with many
+
+========================================================================
+PERPLEXITY on real passages (lower = better):
+  [prose   ] loss=4.589  ppl=98.38
+  [code    ] loss=2.929  ppl=18.71
+  [math    ] loss=3.666  ppl=39.09
+  mean ppl = 52.06

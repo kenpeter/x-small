@@ -1,0 +1,109 @@
+SAN (x-small) SAMPLED EVAL | step=38000 params=43.85M device=cuda
+decode: temp=0.8 top_k=40 top_p=0.9 max_new=120
+training loss @ckpt = 16.489550530910492
+========================================================================
+
+### [knowledge] prompt: 'The capital of France is'
+ the world-ENTIAL, a capital of one of the leading leading fractions. The capital of France is the sum of the two numbers of the sum of the two numbers of the sum of the two numbers. The product of the two numbers is the product of the two numbers.
+
+#### Solution
+
+1. 11.9323
+
+1. 11.949
+
+2. 11.933
+
+3. 11.943
+
+4. 11.944
+
+5. 
+
+### [knowledge] prompt: 'Albert Einstein is best known for'
+ the theory of the relativity of the universe, even if it is the most famous and best known of the 1970s. A 1970-2010 was a physicist, and his theory of relativity was published in 1972. The theory is based on a theory of relativity, and is a very useful source of study for the theory of relativity. This theory is based on the theory of relativity and is an important source of the theory of relativity. This theory is based on the theory of relativity, and is based on the theory of relativity and
+
+### [code-py] prompt: 'def quicksort(arr):'
+
+    return arr.sort((a, b) for a, b in arr)
+```
+    
+    1. Sort the arr array equal to the sorted combination.
+2. Iterate through the sorted combination and for each element, check if the current element is greater than the previous element. If it is, calculate the difference between the current element and the previous element.
+3. If the difference is less than or equal to the previous element, calculate the difference between the current element and the previous element.
+4. If the difference is equal to the previous element, write the difference in
+
+### [code-py] prompt: 'import numpy as np\n\ndef moving_average(x, window):'
+
+    x = np.mean(x,y)
+    return x**2 - x * 2
+
+def calculate_average(x, window):
+    x = window.x
+    window = np.mean(x,y)
+    return x**2 - x * 2
+
+def calculate_average(x, window):
+    x = window.x
+    window = np.mean(x,y)
+    return x**2 - x * 2
+
+def compute_average(x, window):
+    window = np.mean(x,y)
+   
+
+### [code-js] prompt: '// JavaScript: fetch JSON from an API and log it\n'
+type SqlData = SqlData
+
+const (
+	SqlData = SqlData
+	Codec = SqlData
+	Data = SqlData
+	Version = SqlDataVersion
+	DataRepository = SqlDataRepository
+	Log = SqlDataLog
+	LogInfo = SqlDataLogInfo
+	// The value of the DbUUID.
+	DbUUID = Codec.DbUUID
+	// The value of the DbUUID.
+	DbUUIDV
+
+### [math] prompt: 'Solve for x: 2x + 5 = 13. The answer is x ='
+ 13, and the answer is x = 12.
+
+## SIMILAR QUESTIONS
+VARIANT 1  
+A student is to solve an equation of a form of a quadratic equation using the formula x = 16. The quadratic equation is a quadratic equation. The equation x = 12 is the same as x = 5. The equation x = 25 is the same as x = 7.
+
+VARIANT 2  
+A student is to solve an equation of a form of a quadratic equation using the formula
+
+### [reasoning] prompt: "The opposite of 'happy' is"
+ the answer.
+
+A student who has lost his time in a car is rotated 20 ways that are closest to the given integer 1. The sum of these numbers is 20 which is the answer. The student who has lost at least 16 ways to remove the smallest number of ways to remove that number from the permutation of 10 ways.
+
+Given n, the total number of ways to remove the smallest number of ways to remove from the permutation, that number, the sum of the numbers multiplied by 20, is the final sum.
+
+### [open] prompt: 'Write a short poem about the ocean:'
+
+
+(a) It is a poem that tells the world that the earth is the world, and then says it.
+
+(b) The land is not covered by the earth.
+
+(c) It is not covered by the ocean, and can be described by the ocean as follows:
+
+(a) It is the land, and
+
+(b) It is the earth.
+
+(c) It is the earth.
+
+(d) It is the earth.
+
+(e) It is the earth.
+
+(f) It is
+========================================================================
+SAVED -> evaluations/san_sample_step38000_20260825-203641.txt

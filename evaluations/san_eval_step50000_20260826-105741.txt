@@ -1,0 +1,135 @@
+SAN (x-small) EVAL  |  step=50000  params=43.85M  device=cuda
+training loss @ckpt = 16.329995691776276
+state_dict check: missing=0 unexpected=0
+========================================================================
+GREEDY GENERATION (real prompts):
+
+### [knowledge] prompt: 'The capital of France is'
+    The capital of France is the capital of Italy.
+
+    ## What is the capital of Germany?
+
+    A German capital consists of 100,000 people and 250,000 people. The capital consists of 360,000 people and 470,000 people. The capital consists of 890,000 people and 100,000 people. The capital consists of 100,000 people and 250,000 people. The capital consists of 1
+
+### [knowledge] prompt: 'Albert Einstein is best known for'
+    Albert Einstein is best known for his work in the field of relativity.
+
+    The theory of relativity is a very important topic, and it has been used to describe the theory of relativity as well as its applications in physics. The theory of relativity is based on the fact that the motion of an object (or object) in a moving body is a function of time. In this paper we will discuss some of the most recent developments in the field of relativity. We will also discuss some of the latest developments in the field of relativity.
+
+    ## 2.1 Definition of Physics
+
+    The concept of gravity is not only
+
+### [code-py] prompt: 'def quicksort(arr):'
+    def quicksort(arr):
+        """
+        This function returns a list of ordered pairs that are not in the range [0, len(arr)-1].
+
+        :param arr: Array to be sorted.
+        :type arr: List[int]
+        :rtype: list
+        """
+        if len(arr) == 2:
+            return []
+        for i in range(len(arr)):
+            if arr[i] != -1:
+                raise ValueError("arr[i] must have at least one element")
+            else:
+                if arr[i] < arr[i+1]:
+                    raise ValueError("
+
+### [code-py] prompt: 'import numpy as np\n\ndef moving_average(x, window):'
+    import numpy as np
+
+    def moving_average(x, window):
+        """
+        Return the average of all the points in the window.
+
+        Parameters:
+            x (int) - The input data to move on.
+            window (float) - The window to move.
+
+            Returns:
+                A tuple of integers representing the values for each point in the
+                    window.
+            """
+            return np.array([x.shape[0], axis=np.arange(axis),
+                       dtype='float', dtype='float')
+
+
+    class Point(object):
+        """
+        This class is used to represent a point in a single-dimensional
+        space. It is assumed
+
+### [code-js] prompt: '// JavaScript: fetch JSON from an API and log it\n'
+    // JavaScript: fetch JSON from an API and log it
+    	public static String getJSON(String json) {
+    		return JSON.getJSON(json);
+    	}
+
+    	/**
+    	 * Returns the JSON object associated with this method.
+    	 * 
+    	 * @param json The JSON object to retrieve.
+    	 * @return The JSON object associated with this method.
+    	 */
+    	public static Object getObject(String json) {
+    		if (json == null || json instanceof String) {
+    			throw new RuntimeException("The JSON object is not a valid JSON object.");
+    		}
+
+    		Object o
+
+### [math] prompt: 'Solve for x: 2x + 5 = 13. The answer is x ='
+    Solve for x: 2x + 5 = 13. The answer is x = 0.
+
+    ## SOLUTION
+    <think>
+    Okay, let's see what this problem is asking about the area of a circle. First, I need to understand how to find the area of the circle. Let me think about it.
+
+    First, I'll recall that the area of a circle is 4 cm and the area of the circle is 6 cm. So, if we have a circle with radius 7 cm and a circle with radius 8 cm, then the area of the circle is 6 cm. But since the area of the circle is 
+
+### [reasoning] prompt: "The opposite of 'happy' is"
+    The opposite of 'happy' is 10.
+
+    Example 2:
+
+    Input: s = "leetcode"
+    Output: 3
+    Explanation: The reverse operation is 1.
+
+    Example 3:
+
+    Input: s = "leetcode"
+    Output: 4
+ 
+
+ 
+    Constraints:
+
+    1 <= s.length <= 5 * 104
+    s consists of only lowercase English letters.
+
+
+
+    Solution:
+    class Solution:
+        def reverseWords(self, s: str) -> int:
+            ans, i = 0, -1
+
+### [open] prompt: 'Write a short poem about the ocean:'
+    Write a short poem about the ocean:
+
+    The sea is 10,000 km (256.38 m) and its surface is 47.9 meters (125.3 m). The sea is 10,000 km (256.38 m), which is approximately 10,000 km (256.38 m).
+
+    ## How many kilometers are there in an ocean?
+
+    There are 10,000 miles of water in an ocean. There are 1,000 kilometers of
+
+========================================================================
+PERPLEXITY on real passages (lower = better):
+  [prose   ] loss=4.804  ppl=121.96
+  [code    ] loss=3.318  ppl=27.61
+  [math    ] loss=3.691  ppl=40.08
+  mean ppl = 63.22

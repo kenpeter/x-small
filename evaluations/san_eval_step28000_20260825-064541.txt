@@ -1,0 +1,153 @@
+SAN (x-small) EVAL  |  step=28000  params=43.85M  device=cuda
+training loss @ckpt = 17.520448803901672
+state_dict check: missing=0 unexpected=0
+========================================================================
+GREEDY GENERATION (real prompts):
+
+### [knowledge] prompt: 'The capital of France is'
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is the capital of France.
+
+    The capital of France is
+
+### [knowledge] prompt: 'Albert Einstein is best known for'
+    Albert Einstein is best known for his work in the 19th century.
+
+    The 19th century was a century-long period of the 19th century, which was the first to be seen as a period of the 19th century. The 19th century was a period of the 19th century, which was the first to be seen as a period of the 19th century.
+
+    The 19th century was a period of the 19th century, which was the first to be seen as a period of the 19th
+
+### [code-py] prompt: 'def quicksort(arr):'
+    def quicksort(arr):
+        n = len(arr)
+        min_arr, max_arr = 0, n
+        for i in range(1, n - 1):
+            while min_arr[i] <= min_arr[i + 1]:
+                min_arr[i] = min_arr[i + 1]
+                min_arr[i] = max_arr[i]
+                min_arr[i] = min_arr[i]
+
+        min_arr = []
+        for i in range(1, n - 1):
+            min_arr[
+
+### [code-py] prompt: 'import numpy as np\n\ndef moving_average(x, window):'
+    import numpy as np
+
+    def moving_average(x, window):
+        """
+        Calculate the average of the average of the input input and the
+        output of the input.
+        """
+        x = np.array(x)
+        window = window.astype(np.float64)
+        x_average = np.array(x)
+        x_average_average = np.array(x)
+        x_average_average = np.array(x)
+        x_average_average = np.array(x)
+        x_average_average = np.array(x)
+        x_average_average = np.array(x
+
+### [code-js] prompt: '// JavaScript: fetch JSON from an API and log it\n'
+    // JavaScript: fetch JSON from an API and log it
+    //
+    // Copyright (c) 2016-2017, The Regents of the University of California. All rights reserved.
+    // Redistribution and use in source and binary forms, with or without modification,
+    // are permitted provided that the following conditions are met:
+    //
+    //   * Redistributions of source code must retain the above copyright notice,
+    //     this list of conditions and the following disclaimer.
+    //
+    //   * Redistributions in binary form must reproduce the above copyright notice,
+    //     this list of conditions and the following disclaimer in
+
+### [math] prompt: 'Solve for x: 2x + 5 = 13. The answer is x ='
+    Solve for x: 2x + 5 = 13. The answer is x = 13.
+
+    Solutions:
+
+    // python
+
+        ```python
+    def find_kth_value(num, k):
+        if num == 0:
+            return 1
+    
+        if k % 2 == 0:
+            return 2
+    
+        for i in range(num + 1, k + 1):
+            if i % 2 == 0:
+                k = i // 2
+            else:
+                k = i // 2
+        return k
+    ```
+    
+        The algorithm starts with finding the kth value in the given array `num`. Then
+
+### [reasoning] prompt: "The opposite of 'happy' is"
+    The opposite of 'happy' is 1000, and 1000 is a happy number of times.
+
+    The spelling spelling spelling spelling errors in words 16, 27, 38, 49, 90, 1000 are not valid by rearranging the words (lex English) and the concatenation (lex English) are similar (i.e., no other words are words with a different ordering).
+
+    Given a string s, return the number of words in a palindrome.
+
+    A palindrome is a string that is
+
+### [open] prompt: 'Write a short poem about the ocean:'
+    Write a short poem about the ocean:
+
+    The story of the ocean is
+
+    The story of the ocean is
+
+    The story of the ocean is
+
+    The story of the ocean is
+
+    The story of the ocean is
+
+    The story of the ocean is
+
+    The story of the ocean is
+
+    The story of the ocean is
+
+    The story of the ocean is
+
+    The story of the ocean is
+
+    The story of the ocean is
+
+    The story of the ocean is
+
+    The story of the ocean is
+
+    The story of the ocean is
+
+    The story of the ocean is
+
+========================================================================
+PERPLEXITY on real passages (lower = better):
+  [prose   ] loss=4.583  ppl=97.82
+  [code    ] loss=3.411  ppl=30.29
+  [math    ] loss=4.053  ppl=57.58
+  mean ppl = 61.90

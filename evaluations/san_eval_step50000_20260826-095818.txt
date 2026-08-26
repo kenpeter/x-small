@@ -1,0 +1,103 @@
+SAN (x-small) EVAL  |  step=50000  params=43.85M  device=cuda
+training loss @ckpt = 16.329995691776276
+state_dict check: missing=0 unexpected=0
+========================================================================
+GREEDY GENERATION (real prompts):
+
+### [knowledge] prompt: 'The capital of France is'
+    The capital of France is the capital of France. The capital of France is the capital of France.
+
+    The capital of France is the capital of France. The capital of France is the capital of France. The capital of France is the capital of France.
+
+    The capital of France is the capital of France. The capital of France is the capital of France. The capital of France is the capital of France.
+
+    The capital of France is the capital of France. The capital of France is the capital of France. The capital of France is the capital of France.
+
+    The capital of France is the capital
+
+### [knowledge] prompt: 'Albert Einstein is best known for'
+    Albert Einstein is best known for his work in the field of relativity.
+
+    The theory of relativity is a very important topic in physics. It is the theory of relativity, and it is the theory of relativity.
+
+    The theory of relativity is a very important topic in physics. It is the theory of relativity. It is the theory of relativity.
+
+    The theory of relativity is a very important topic in physics. It is the theory of relativity. It is the theory of relativity.
+
+    The theory of relativity is a very important topic in physics. It is the theory of relativity. It is the theory of relativity
+
+### [code-py] prompt: 'def quicksort(arr):'
+    def quicksort(arr):
+        """
+        This function returns a list of ordered list of integers.
+        """
+        return sorted(arr.values())
+
+    def sort_array(arr):
+        """
+        This function returns a list of sorted array.
+        """
+        return sorted(arr.values())
+
+    def sort_array_list(arr):
+        """
+        This function returns a list of sorted list of sorted array.
+        """
+        return sorted(arr.values())
+
+    def sort_array_list_list(arr):
+        """
+        This function returns a list of sorted list of sorted array.
+   
+
+### [code-py] prompt: 'import numpy as np\n\ndef moving_average(x, window):'
+    import numpy as np
+
+    def moving_average(x, window):
+        """
+        Return the average of the average of the two points in the window.
+        """
+        return np.sqrt(x * window.x)
+
+    def average_average(x, window):
+        """
+        Return the average of the average of the two points in the window.
+        """
+        return np.sqrt(x * window.x)
+
+    def average_average(x, window):
+        """
+        Return the average of the average of the two points in the window.
+        """
+        return np.sqrt(x * window.x)
+
+    def average_
+
+### [code-js] prompt: '// JavaScript: fetch JSON from an API and log it\n'
+    // JavaScript: fetch JSON from an API and log it
+    //
+    // Copyright (c) 2006-2012, Knut Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein Rein
+
+### [math] prompt: 'Solve for x: 2x + 5 = 13. The answer is x ='
+    Solve for x: 2x + 5 = 13. The answer is x = 13.
+
+    ## SOLUTION
+    <think>
+    Okay, let's see. The problem is about finding the area of a circle. The problem is about finding the area of a circle. The problem is about finding the area of a circle. The problem is about finding the area of a circle. The problem is about finding the area of a circle. The problem is about finding the area of a circle. The problem is about finding the area of a circle.
+
+    First, I need to understand the problem. The problem is about finding the area of a circle. The
+
+### [reasoning] prompt: "The opposite of 'happy' is"
+    The opposite of 'happy' is 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+
+### [open] prompt: 'Write a short poem about the ocean:'
+    Write a short poem about the ocean:
+
+    The ocean is a large, unsolvable, unsolvable, unsolvable, unsolvable, unsolvable, unsolvable, unsolvable, unsolvable, unsolvable, unsolvable, unsolvable, unsolvable, unsolvable, unsolvable, unsolvable, unsolvable, unsolvable, unsolvable, unsolvable, unsolvable, unsolvable, unsolvable, unsolvable, unsolvable, unsolvable, unsolvable, unsolvable, unsolvable,
+
+========================================================================
+PERPLEXITY on real passages (lower = better):
+  [prose   ] loss=4.804  ppl=121.96
+  [code    ] loss=3.318  ppl=27.61
+  [math    ] loss=3.691  ppl=40.08
+  mean ppl = 63.22

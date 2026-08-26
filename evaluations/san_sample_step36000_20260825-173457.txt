@@ -1,0 +1,122 @@
+SAN (x-small) SAMPLED EVAL | step=36000 params=43.85M device=cuda
+decode: temp=0.8 top_k=40 top_p=0.9 max_new=120
+training loss @ckpt = 16.549306631088257
+========================================================================
+
+### [knowledge] prompt: 'The capital of France is'
+ also the capital of France.
+
+The capital of France is also the capital of France.
+
+The capital of France is also the capital of France.
+
+The capital of France is also the capital of France.
+
+The capital of France is also the capital of France.
+
+The capital of France is also the capital of France.
+
+The capital of France is also the capital of France.
+
+The capital of France is also the capital of France.
+
+The capital of France is also the capital of France.
+
+The capital of France is also the capital
+
+### [knowledge] prompt: 'Albert Einstein is best known for'
+ the theory of the relativity of the universe, even if it is the most famous and the most important object of the universe. It is called Einstein, which states that the matter of a matter of a matter is not a matter of a matter but a matter of the other two. The Einstein class is called Einstein, and Einstein, as well as Einstein.
+
+The Einstein class is called Einstein, and Einstein is a special relativity, which is called Einstein.
+
+It is called Einstein, because it states that the Einstein class is the only constant of a constant, and it is called Einstein,
+
+### [code-py] prompt: 'def quicksort(arr):'
+
+    return arr.sort((a, b) for a, b in arr)
+```
+    
+    1. Sort the arr array in ascending order.
+2. Define a 3-dimensional dp dp table, where the value of `arr[i]` represents the time of each value in the last array elements.
+3. Initialize a 2D dp table with an array of size n (in ascending), initialized with n n values, and then taken up the remaining values.
+4. Iterate through the dp table until one difference between the first `i` and
+
+### [code-py] prompt: 'import numpy as np\n\ndef moving_average(x, window):'
+
+    x = np.zeros((x,y))
+    window = np.zeros((x,y))
+    return x.shape[0]
+
+    def __eq__(self, other):
+        if isinstance(other, np.ndarray):
+            raise TypeError(
+                "You don't have an array of x")
+        return x.shape == 2
+
+
+def transform(x, window):
+    x = np.zeros((x,y))
+    window = window.shape
+    return x.shape
+
+    def __eq__(self, other):
+        if isinstance(other, np.
+
+### [code-js] prompt: '// JavaScript: fetch JSON from an API and log it\n'
+type SqlData = SqlData
+
+type SqlData struct {
+	// Return the JSON data for the given SqlData.
+	// If there are no errors, this is not a JSON error.
+	//
+	// The returned JSON data is a JSON.Data object.
+	//
+	// The JSON error is a JSON error.
+	//
+	// The error is a JSON error.
+	//
+	// The error is a JSON error.
+	//
+	// The error is a JSON error.
+	//
+
+
+### [math] prompt: 'Solve for x: 2x + 5 = 13. The answer is x ='
+ 13, and the answer is x = 12.
+
+## SIMILAR QUESTIONS
+VARIANT 1  
+A farmer can use the information provided in a spreadsheet to analyze the number of days they can produce. One day, the farmer will need a 10-year-old day. How many days will they have to produce the next 5 days?
+
+VARIANT 2  
+A farmer can use the information provided in a spreadsheet to analyze the number of days they can produce. One day, the farmer will need a 
+
+### [reasoning] prompt: "The opposite of 'happy' is"
+ the answer.
+
+A student who has lost the time the sum of these four moves is twice the maximum amount of time, while the sum of the two moves is twice the maximum amount of time. The sum of the two is calculated by multiplying the total number of moves `n` by 10 and adding the total time for the next move.
+
+Return _the resultant truck truck to distribute distribute distribute distribute_ `n` _at.
+
+**Example 1:**
+
+**Input:** n = 2
+**Output:** 3
+**Explanation:** The optimal
+
+### [open] prompt: 'Write a short poem about the ocean:'
+
+
+(a) It is a poem that tells the world that the earth is the world, and then says it.
+
+(b) The land is not covered by the earth.
+
+(c) It is not covered by the ocean, and the earth is covered by the ocean.
+
+(d) There is no "great path" on the surface, and it is no longer on the surface.
+
+(e) The sea is covered by the earth.
+
+(f) The earth is covered by the ocean, and it is covered by the ocean.
+========================================================================
+SAVED -> evaluations/san_sample_step36000_20260825-173457.txt

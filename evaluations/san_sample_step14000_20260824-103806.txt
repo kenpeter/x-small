@@ -1,0 +1,115 @@
+SAN (x-small) SAMPLED EVAL | step=14000 params=43.85M device=cuda
+decode: temp=0.8 top_k=40 top_p=0.9 max_new=120
+training loss @ckpt = 13.990978240966797
+========================================================================
+
+### [knowledge] prompt: 'The capital of France is'
+ a two-part, a half-part of the government.
+A group of scholars, including the U.S. and the German Institute for Social Science, said:
+"This is a good thing for some people, but it will happen."
+But this may not mean that most people are living in a village. But it is not so bad for the community, and it is good for those who are living in a village, and the community is a good thing.
+But the most good is a village, or a village, and in some places, the community is the same
+
+### [knowledge] prompt: 'Albert Einstein is best known for'
+ the quantum quantum theory of the quantum-computer interaction. In the first case, the quantum-computer interaction is not the same. The quantum-computer interaction is used in the context of quantum mechanics and to solve quantum-computer problems.
+
+## Why the quantum-computer interaction is not so important
+
+### Theoretical
+
+Theoretical
+
+Theoretical
+
+Theoretical
+
+We are not really interested in quantum-computer interaction, but in the way that quantum-computer interaction is not really useful. There is a lot of information on the quantum-computer interaction
+
+### [code-py] prompt: 'def quicksort(arr):'
+
+    return 1 if arr.index(arr) < arr.index(arr) else -1
+```
+    
+    1. Sort the arr array.
+2. Iterate through the given array, adding the index to the index set for the next element of the array.
+3. Initialize a variable variable to 1.
+4. Iterate through the array, again with the i-th index of the word in the array.
+5. If the jth word is not equal to thejth word, enter the v-values array in the array and break it
+
+### [code-py] prompt: 'import numpy as np\n\ndef moving_average(x, window):'
+
+    x = np.mean(x, None)
+    return x[0]
+```
+
+The `moving_average` is the **minimum** of the **average** of the `window`. Here's an example:
+
+```python
+from math import math
+
+from math.utils import time
+
+import math.io.input
+
+# Python
+x = np.random.random()
+y = np.random.random()
+x.mean = 0.505002
+y.mean = 0.6050
+
+### [code-js] prompt: '// JavaScript: fetch JSON from an API and log it\n'
+// in a way that it does a simple script
+// This is an implementation of the JSON interface, and is the first thing you need to know.
+//
+// 2.1.2: The default values for the J-lang interface
+// 2.1.2.1: An array of the JavaScript object that is being
+// 2.1.2.1.1. The array is the first and the second arguments for the
+//  J-lang interface, so the J-lang interface is not needed.
+//
+// 3
+
+### [math] prompt: 'Solve for x: 2x + 5 = 13. The answer is x ='
+ 13.
+
+Solution:
+
+Let x be the x-axis, the y-axis, and the x-axis be x-axis.
+
+Let y be the y-axis, the y-axis, and the x-axis be x-axis.
+
+Given x = 0 and y = 1, we can solve for x for x.
+
+The solution is:
+
+x = x - 1
+
+If x = 0 and y = 1, then
+
+x = 1 - 1
+
+If x
+
+### [reasoning] prompt: "The opposite of 'happy' is"
+ the same.
+
+For example, if the word 'n' is 'i', then 'i' is the same as 'u'.
+
+The second condition is because the next word is 'i', then 'i' is the same as 'u'.
+
+Return `true` _if the word's reverse is already in the array_ `word`. If it's not in the array_ `word`, return `false`.
+
+**Example 1:**
+
+**Input:** word = \[ "a ", b, c, d ", d, cnt, l
+
+### [open] prompt: 'Write a short poem about the ocean:'
+ What are the most recent events?
+The events are called wars. They are the first-time events that lead to the first and second-time events.
+The events are called wars.
+In the United States, the United States is named after the French and a member of the British Empire.
+The United States has been known for the long-term and long-term events that will be expected to happen.
+The United States is named after the French and the French.
+The United States is named after the French.
+The United States is named after the French and the French
+========================================================================
+SAVED -> evaluations/san_sample_step14000_20260824-103806.txt

@@ -1,0 +1,101 @@
+SAN (x-small) SAMPLED EVAL | step=48000 params=43.85M device=cuda
+decode: temp=0.8 top_k=40 top_p=0.9 max_new=120
+training loss @ckpt = 16.330523788928986
+========================================================================
+
+### [knowledge] prompt: 'The capital of France is'
+ the world-ENTIAL, a capital of one of the leading leading powers. The capital of France is the capital of the French Empire and the capital of the French Empire. The capital of France is the capital of the German Empire, the capital of the French Empire and the capital of the French Empire. The capital of France is the capital of the French Empire, the capital of the French Empire, the capital of the French Empire, the capital of the French Empire, the capital of the French Empire and the capital of the French Empire.
+The first century in the nineteenth century to make the capital of
+
+### [knowledge] prompt: 'Albert Einstein is best known for'
+ the theory of the relativity of the universe, even if it is the most famous and well-known object of the universe. It is called the 3D structure, and is a fascinating and elegant framework that will be used to describe the universe.
+
+###### Abstract
+
+This paper is devoted to a paper published in the journal Nature, which shows that the universe was the first time in space in space, and that it is an integral part of the theory of the relativity. This paper was published in the journal Nature, which is part of the paper.
+
+### The Creation of
+
+### [code-py] prompt: 'def quicksort(arr):'
+
+    return arr.sum(arr)
+```
+
+    
+    1.size = k (1000) // 8
+    int arr_length = 25000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+
+### [code-py] prompt: 'import numpy as np\n\ndef moving_average(x, window):'
+
+    x = np.mean(x.mean())
+    window = np.flat[x.shape[0]]
+    x = 0
+    return np.next(x, window)
+
+def _next_window(x, window):
+    x = np.mean(x.next())
+    window = x.shape[0]
+    return np.next(x, window)
+
+def _next_window_frame(x, window):
+    x = np.mean(x.next())
+    window = np.flat[x.shape[0]]
+   
+
+### [code-js] prompt: '// JavaScript: fetch JSON from an API and log it\n'
+	var JSONData = JSONData{
+		JSON: JSONData,
+	}
+	// JavaScript: fetch JSON from a JSON data object
+	var JSONData = JSONData{
+		JSON: JSONData,
+		JSON: JSONData,
+	}
+	// JSONData: JSONData
+	//
+	// The JSONData interface is used to retrieve a JSON from an object.
+	JSONData(string value, string value[] string) JSONData {
+		// The JSONData interface is used to retrieve a JSON from an object.
+	
+
+### [math] prompt: 'Solve for x: 2x + 5 = 13. The answer is x ='
+ 9.
+
+## SIMILAR QUESTIONS
+VARIANT 1  
+If you are 5x and 5y, the area of the rectangle is 2y + 3y + 4 = 23. If you are 2x and 4y, the area is 13. The area of the rectangle is 2x - 3y = 4. Find the area of the rectangle.
+
+VARIANT 2  
+If you are 6x and 6y, the area of the rectangle is
+
+### [reasoning] prompt: "The opposite of 'happy' is"
+ the answer.
+
+A friend who has bought the next square takes his friend to win. The winner is the closest possible, and the winner is the closest, to the friend's winner.
+
+The answer is obtained by finding the product of the probabilities of these two friends.
+
+Return the smallest such pair of numbers.
+ 
+Example 1:
+
+Input: n = 5, k = 2
+Output: 1000
+
+Example 2:
+
+Input: n = 2, k = 3
+Output: 50
+
+### [open] prompt: 'Write a short poem about the ocean:'
+
+
+(a) It is a poem that tells the world that the earth is above the ocean. The ocean is the only part of the ocean, the earth, and the ocean.
+
+(b) It is a poem that tells the world that the earth is above the ocean. The ocean is the only part of the ocean, the earth, and the ocean.
+
+(c) It is a poem that tells the world that the earth is above the ocean. The ocean is the only part of the ocean, the earth, and the ocean.
+
+(d) It
+========================================================================
+SAVED -> evaluations/san_sample_step48000_20260826-084659.txt

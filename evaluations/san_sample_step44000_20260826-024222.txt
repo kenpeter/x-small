@@ -1,0 +1,124 @@
+SAN (x-small) SAMPLED EVAL | step=44000 params=43.85M device=cuda
+decode: temp=0.8 top_k=40 top_p=0.9 max_new=120
+training loss @ckpt = 16.363242089748383
+========================================================================
+
+### [knowledge] prompt: 'The capital of France is'
+ the capital of the United States, and also refers to the capital of the United States as a capital of the United States.
+
+The capital of France is also known as the capital of France, and its capital is also known as the capital of the United States, or any other capital of the United States.
+
+The capital of France is also known as the capital of France, and its capital is also known as the capital of the United States, or any other capital of the United States, or any other capital of the United States.
+
+The capital of France is also known as
+
+### [knowledge] prompt: 'Albert Einstein is best known for'
+ the theory of the relativity of the universe, even if it is the most famous and well-known object of the universe. It is called the Einstein-Lost-Lost-Lost-Lost-Lost-Lost-Lost-Lost-Lost-Lost-Lost-Lost-Lost-Lost-Lost-Lost-Lost-Lost-Lost-Lost-Lost-Lost-Lost-Lost-Lost-Lost-Lost-Lost-Lost-Lost
+
+### [code-py] prompt: 'def quicksort(arr):'
+
+    return arr.sum(arr)
+```
+
+    
+    1. Initialize variables `arr` and `arr` to be a non-negative integer.
+2. Iterate through the input array and for each element, compare its occurrences (to the `arr`) using the `sum` operation. If the element is not present, add it to the `arr`, otherwise add it to the `arr`.
+3. If the element is not present, increment the `arr`.
+4. If the element is not present, increment the `arr` and repeat repeat until the end
+
+### [code-py] prompt: 'import numpy as np\n\ndef moving_average(x, window):'
+
+    x = np.mean(x.mean)
+    window = np.flat[x.shape[0]]
+    x = np.mean(x.shape[0])
+    return x
+
+def _get_x(x):
+    x = np.array(x.shape)
+    return x
+
+
+def _get_window(x):
+    x = np.array(x.shape)
+    return x
+
+def _get_window_size(x):
+    x = np.array(x.shape)
+    return x
+
+def _get_
+
+### [code-js] prompt: '// JavaScript: fetch JSON from an API and log it\n'
+// Copyright (c) 2007-2013 by Jeroen Bragg <jeroen@boy.net>
+
+
+package org.jeroen.boy.model;
+
+import java.io.File;
+import java.io.FileOutputStream;
+
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+public class JeroenBoy extends JTest {
+
+    @Test
+    public void test()
+
+### [math] prompt: 'Solve for x: 2x + 5 = 13. The answer is x ='
+ 13.
+
+Solving for 2:
+
+x = 2x + 1 = 23
+
+Solving for 3:
+
+x = 2x + 3 = 34
+
+Solving for 4:
+
+x = 2x + 4 = 36
+
+Solving for 5:
+
+x = 2x + 4 = 37
+
+Solving for 6:
+
+x = 2x + 6 = 38
+
+Solving for 
+
+### [reasoning] prompt: "The opposite of 'happy' is"
+ the answer.
+
+A friend who has lost the time the sum of the squares of their Fibonacci numbers is 1, 2, 3, 4, 5.
+
+The answer is 0.
+
+Given an integer n, return `the product of any number of Fibonacci numbers such that 1 <= n <= n <= 109.
+ 
+Example 1:
+
+Input: n = 2
+Output: 10
+Explanation: 10 + 2 = 1.
+
+Example 2:
+
+
+### [open] prompt: 'Write a short poem about the ocean:'
+
+
+(a) It is a poem that tells the world that the earth is the world, and that it is the human body, and that it is the human body.)
+
+(b) It is a poem that tells the world that the ocean is the world, and that it is the human body.
+
+(c) It is a poem that tells the world that the ocean is the world, and that it is the human body.
+
+(d) It is a poem that tells the world that the ocean is the world, and that it is the human body.
+========================================================================
+SAVED -> evaluations/san_sample_step44000_20260826-024222.txt

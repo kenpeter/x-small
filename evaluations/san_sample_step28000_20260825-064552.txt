@@ -1,0 +1,113 @@
+SAN (x-small) SAMPLED EVAL | step=28000 params=43.85M device=cuda
+decode: temp=0.8 top_k=40 top_p=0.9 max_new=120
+training loss @ckpt = 17.520448803901672
+========================================================================
+
+### [knowledge] prompt: 'The capital of France is'
+ also the capital of France.
+
+The capital of France is also the capital of France.
+
+The capital of France is also the capital of France.
+
+The capital of France is also the capital of France.
+
+The capital of France is also the capital of France.
+
+The capital of France is also the capital of France.
+
+The capital of France is also the capital of France.
+
+The capital of France is also the capital of France.
+
+The capital of France is also the capital of France.
+
+The capital of France is also the capital
+
+### [knowledge] prompt: 'Albert Einstein is best known for'
+ the evolution of the universe. A fundamental principle of physics is to understand the evolution of the universe.
+
+The theory of Einstein and Einstein is not only true; the matter itself is not only a matter of measurement but rather a whole, not a matter of physical and mechanical life. The universe is not just a whole, not a matter of physical or mechanical life. It is the essence of Einstein, which is a whole, not a matter of physical and mechanical life. The Einstein is also a good one of the most important ideas of its history.
+
+The universe is only one of the
+
+### [code-py] prompt: 'def quicksort(arr):'
+
+    return min(arr.values() if len(arr) > 2 else min(arr[0], arr[1] + 1) - 1)
+```
+    
+    1. For each element `arr[0]`, we calculate the difference between its min_count and the minimum element `arr[1]` by summing the elements from `arr[0]` to `arr[1]`. This is because the team is not at the same index, and we find the minimum consecutive elements in this index.
+
+For each number in `arr
+
+### [code-py] prompt: 'import numpy as np\n\ndef moving_average(x, window):'
+
+    x_x = x.x
+    y_x = x.y
+    z_x = y.z
+    return y_x * y_x * y_y
+
+def get_average(x, window):
+    x, window = window.y
+    return x * window
+
+
+def _set_average(x, window):
+    x, window = window.x
+    x_x = x.x - window
+    y_x = y.y - window
+    return y_x * y_x * y_y
+
+def get_average
+
+### [code-js] prompt: '// JavaScript: fetch JSON from an API and log it\n'
+type JsonValue interface {
+	// Returns a JSON object with the specified JSON name.
+	// The JSON object is a JSON object.
+	// It is a JSON object to be used as the JSON representation of the returned object.
+	//
+	// The JSON object is an JSON representation of the returned object.
+	// The JSON object contains the JSON representation of the returned object.
+	// The JSON object is the JSON object which contains the JSON representation of the returned object.
+	// The JSON object is the JSON object which contains the JSON representation of the returned
+
+### [math] prompt: 'Solve for x: 2x + 5 = 13. The answer is x ='
+ 13.
+
+Solve for x: 2x + 5 = 13.
+
+Solve for x: 2x + 5 = 13.
+
+Solve for x: 2x + 5 = 13.
+
+Solve for x: 2x + 5 = 13.
+
+Solve for x: 2x + 5 = 13.
+
+Solve for x: 2x + 5 = 13.
+
+Solve for x: 
+
+### [reasoning] prompt: "The opposite of 'happy' is"
+ the answer you would have linked the opposite opposite to the opposite opposite.
+
+A **good**
+
+Return _the **happy** the opposite**_ _rounded_ _rounded_ _rounded_ _rounded_ _rounded_ _rounded_ _rounded_ _rounded_ _rounded_ _rounded_ _rounded_ _rounded_ _rounded_ _rounded_ _rounded_ _rounded_ _rounded_ _rounded_ _rounded_ _rounded_ _rounded_ _rounded_ _rounded_ _rounded_ _rounded_ _rounded_ _rounded_ _rounded_ _rounded_ _
+
+### [open] prompt: 'Write a short poem about the ocean:'
+
+
+"We've got the water from a river on a river, and the water is 100 feet wide, and the water is 80 feet wide."
+
+I'd like to know what this is like for me.
+
+I'm a scientist with a friend. What's the value of the answer?
+
+I'm a scientist who has a friend. What are the values of the numbers in the equation of the solution and what are the values?
+
+So what is the value of the answer?
+
+What are the values of the numbers in the
+========================================================================
+SAVED -> evaluations/san_sample_step28000_20260825-064552.txt

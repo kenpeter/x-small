@@ -1,0 +1,97 @@
+SAN (x-small) SAMPLED EVAL | step=50000 params=43.85M device=cuda
+decode: temp=0.8 top_k=40 top_p=0.9 max_new=120
+training loss @ckpt = 16.329995691776276
+========================================================================
+
+### [knowledge] prompt: 'The capital of France is'
+ the world-ENTIAL, a capital of one of the leading leading zeros. The capital of France is the capital of the other leading zeros. The capital of France is the capital of the other leading zeros. The capital of France is the capital of the other leading zeros.
+
+The capital of France is a capital of one of the leading leading zeros. The capital of France is a capital of one of the leading leading zeros. The capital of France is a capital of one of the leading leading zeros. The capital of France is the capital of the other leading zeros. The capital of France is the
+
+### [knowledge] prompt: 'Albert Einstein is best known for'
+ the theory of the relativity of the universe, even if it is the most famous and best known of the 1970s. A 1970-2010 and a 1970-2010 was the first of the 1970s, was published in 1965 in 1968.
+
+## A. 1993
+
+2010 (1970) was a 1990-1970, the most famous mathematician of the 
+
+### [code-py] prompt: 'def quicksort(arr):'
+
+    return arr.sum(arr)
+```
+
+    
+    1.size = 104
+2. retain(i15, j15) (i15, j15) : array (See [`arr.length + 1`](index.md). - order order order.
+3. retain(i15, j15) (i15, j15) : array (See [`arr.length + 1`](index.md). - order order order.
+    (i15, j15
+
+### [code-py] prompt: 'import numpy as np\n\ndef moving_average(x, window):'
+
+    x = np.zeros((x, dtype=np.float64, dtype=np.float64)):
+    # this is an array of integers
+    # for each of the x's:
+    x = np.zeros((x, dtype=np.float64))
+    # for each x's:
+    x_indices = np.ones((x, dtype=np.float64))
+    # for each x's:
+    x_indices_indices = np.ones((x, dtype=np.float64))
+    # for each x's:
+
+### [code-js] prompt: '// JavaScript: fetch JSON from an API and log it\n'
+// Copyright (c) 2003-2013 by the Regents of the University of California. All rights reserved.
+// This software was developed by Regents of the University of California.
+// For licensing information, see the LICENSE file in the main directory of this source
+// tree.
+///
+/// \file
+///
+/// \brief The API API that implements a API-like interface
+///
+/// This API is the interface to the API API API API API API API API API API API API API API API API
+
+### [math] prompt: 'Solve for x: 2x + 5 = 13. The answer is x ='
+ 13.
+
+Solve for x: 2x + 5 = 13.
+
+Solve for x: 2x + 5 = 13.
+
+Solve for x: 2x + 5 = 13.
+
+### Step-by-step solution
+
+1. 2x + 5 = 13.
+2. 5x + 5 = 13.
+3. 5x + 5 = 13.
+4. 5x + 5 =
+
+### [reasoning] prompt: "The opposite of 'happy' is"
+ the answer.
+
+A friend who has bought the next square takes his friend to win, with only a friend whose friend wins.
+
+The teacher has a teacher that is not in the correct order.
+
+There is no way to correct the answer.
+
+## THREE SOLUTION METHODS
+METHOD 1:  
+**Approach: Use a Solution**  
+**Approach: Use Solution**  
+**Step-by-step Solution:**  
+1. **Choose a friend who has not ended with a winner**  
+2. **Define
+
+### [open] prompt: 'Write a short poem about the ocean:'
+
+
+(a) It is a poem that tells the world that the earth is the world, and that it is the human body, and that it is the human body.)
+
+(b) It is a poem that tells the world that the ocean is the world, and that it is the human body.
+
+(c) It is a poem that tells the world that the ocean is the world, and that it is the human body.
+
+(d) It is a poem that tells the world that the ocean is the world, and that it is the human body.
+========================================================================
+SAVED -> evaluations/san_sample_step50000_20260826-095840.txt
