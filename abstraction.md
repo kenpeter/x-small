@@ -158,8 +158,10 @@ forward+MTP+backward on GPU, ~3GB VRAM @ seq 512 (fits 12GB at full 2048×b32).
 - Fixed issues during bring-up:
   - **RoPE device bug** — `precompute_rope_freqs` built tables on CPU; now moved via `._rope()` to model device.
   - **MTP loss alignment** — main CE compares full `main` vs `y` (no `[:, :-1]` slice); MTP (`mtp[:, :-1]` vs `y[:, 1:]`) predicts token[t+2] from x[t]+emb(tok[t+1]).
-- Verified **running on GPU (cuda:0, RTX 4070 Ti)**: loss 11.97→11.91→11.70 over 30 steps, ~2.5–3.0k tok/s @ batch 1 / seq 512.
-- Config defaults: batch 4 × accum 8 = eff 32, seq 2048, lr 4e-4 cos→1e-4, warmup 1000, save_every 2000, val_frac 0.01, checkpointing to `/home/kenpeter/work/checkpoints/xsmall_san` (`san_latest.pt`).
+- Verified **running on GPU (cuda:0, RTX 4070 Ti)**: loss 11.97→11.91→11.70 over 30 steps, ~2.5–3.0k tok/s @ batch 1 / seq 512. Full curriculum run launched at **~11.6k tok/s** (eager), batch 4 × accum 8, seq 2048 — loss ~2.9 @ step 50260.
+- Config defaults: batch 4 × accum 8 = eff 32, seq 2048, lr 4e-4 cos→1e-4, warmup 1000, save_every 2000, val_frac 0.01, **checkpoint-dir `/home/kenpeter/work/x-small/checkpoints/san`** (`san_latest.pt`, latest-only — never best.pt). Launch flags: `--curriculum --dedup` (stratified domain-tiered sampler + dedupe), **`--no-compile`** (see below).
+- **Compile-mask graph break (`san_model.py`)** — `MultiHeadAttention.forward` compared masks via `torch.equal(mask, causal_ref)` (data-dependent → torch.compile graph-break + crash when the curriculum mask changes per batch). Fixed: identity check `mask is causal_ref` against a **cached causal mask** (`_causal_mask_cache` dict + `_get_causal_mask()`); `_hidden()` and `compute_loss()` now pull the cached mask from `blocks[0].attn` / `mtp_block.attn` instead of `make_causal_mask(...)`. Compile-safe in principle.
+- **torch.compile HANGS (autotune tax pathological)** — with the mask fix, `torch.compile` still never finishes inductor autotune (>7 min wall, 0% GPU, no `✅ compiled compute_loss` line) on this 27-layer + MTP + engram + Triton-Sinkhorn model. Compiled mode was ~15k tok/s (vs ~11.6k eager) but is **unreachable**. Decision: run **`--no-compile` (eager)** — reliable for this small model; the autotune tax isn't worth it.
 
 ### Commits
 - `cfa5334` — port SAN to PyTorch (45.21M params, faithful). *(device + loss fixes after this are NOT yet committed — see Pending.)*
@@ -210,7 +212,22 @@ restart); `curriculum_boost.json` hot-reload with code-dominant boost
 (code_easy 21×, code_medium 12×, code_hard 21×, code_gold 10×) for the exam-style
 code-pass goal. Verified: 16 sources, resume-from-latest, 34k tok/s.
 
+✅ **Real curriculum run LAUNCHED** (2026-08-26): `--curriculum --dedup
+--no-compile`, batch 4 × accum 8, seq 2048, `--checkpoint-dir
+/home/kenpeter/work/x-small/checkpoints/san`, `--save-every 2000`,
+resume-from-latest. Reached **step ~50260, loss ~2.9** (~11.6k tok/s, stable
+eager). `san_latest.pt` backed up to `san_latest.pt.bak-premix-20260826-123552.pt`
+before relaunch. ⚠️ **Run is currently DOWN** — killed during a torch.compile
+test (see Pending #2); needs relaunch.
+
+✅ **Compile-mask fix (`san_model.py`)**: attention mask comparison changed from
+`torch.equal` (data-dependent graph-break) to identity check vs cached causal
+mask — see Training section. Note: torch.compile *still hangs* on autotune for
+this model, so **`--no-compile` (eager) is the operational mode**.
+
 🔜 Pending:
-1. **Launch real GPU run** — curriculum `--curriculum`, batch 4 × accum 8, seq 2048, 50k steps, detached + watchdog.
-2. **Eval** trained SAN on code/math prompts.
-3. Housekeeping: `token_rotation_test.py` committed with tokens redacted (HF tokens removed — were in git, push-protection flagged).
+1. **Relaunch training** — `--curriculum --dedup --no-compile`, same checkpoint-dir; resume from `san_latest.pt`. Currently down (killed in compile test). Keep `--curriculum` on relaunch (else stale cron) + SIGTERM-safe restart.
+2. **Investigate torch.compile hang** (low priority) — inductor autotune never finishes (>7 min, 0% GPU) on 27L+MTP+engram. Options: `mode="reduce-overhead"`, disable autotune, or accept eager (~11.6k vs ~15k compiled). Eager is stable; skip unless 15k matters.
+3. **Hermes agent-1 config (needs `hermes gateway restart`, user shell)**: default model switched `hy3-free → nemotron-3-ultra-free` (bigger context → less compression needed); compression loosened (`threshold 0.8`, `target_ratio 0.5`, `protect_last_n 40`). Not yet active until gateway restart.
+4. **Eval** trained SAN on code/math prompts.
+5. Housekeeping: `token_rotation_test.py` committed with tokens redacted (HF tokens removed — were in git, push-protection flagged).

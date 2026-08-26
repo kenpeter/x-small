@@ -246,6 +246,13 @@ class MultiHeadAttention(nn.Module):
         for w in (self.q_proj.weight, self.k_proj.weight, self.v_proj.weight, self.gate_proj.weight):
             nn.init.normal_(w, 0, _STD)
         nn.init.normal_(self.out_proj.weight, 0, res_std)
+        # Causal mask cache for torch.compile compatibility (identity check, not value)
+        self._causal_mask_cache = {}
+
+    def _get_causal_mask(self, T, device):
+        if T not in self._causal_mask_cache:
+            self._causal_mask_cache[T] = make_causal_mask(T, device)
+        return self._causal_mask_cache[T]
 
     def forward(self, x, mask=None, rope=None):
         B, T, _ = x.shape
@@ -266,8 +273,8 @@ class MultiHeadAttention(nn.Module):
             # Standard causal (lower-triangular) mask -> use is_causal so SDPA picks
             # FlashAttention (O(B*T) mem) instead of materializing (B,H,T,T). Math is
             # identical. Anything non-causal (e.g. packing mask) keeps the explicit path.
-            causal_ref = make_causal_mask(T, mask.device)
-            if mask.shape == causal_ref.shape and torch.equal(mask, causal_ref):
+            causal_ref = self._get_causal_mask(T, mask.device)
+            if mask is causal_ref:
                 attn_mask = None
                 is_causal = True
             else:
@@ -513,7 +520,8 @@ class SimpleAttentionNetwork(nn.Module):
     def _hidden(self, tokens, mask=None):
         cfg = self.cfg
         if mask is None:
-            mask = make_causal_mask(tokens.shape[1], tokens.device)
+            # Use cached causal mask from first block's attention for torch.compile compatibility
+            mask = self.blocks[0].attn._get_causal_mask(tokens.shape[1], tokens.device)
         B, T = tokens.shape
         x = self.embedding(tokens) * self.embed_scale
         cos, sin = self._rope(T)
@@ -599,7 +607,8 @@ class SimpleAttentionNetwork(nn.Module):
             return main_ce, float(main_ce.item()), 0.0
 
         # MTP: m[t] predicts y[t+1]; iterate m-positions 0..T-2
-        mask = make_causal_mask(T, tokens.device)
+        # Use cached causal mask from MTP block's attention for torch.compile compatibility
+        mask = self.mtp_block.attn._get_causal_mask(T, tokens.device)
         rope = self._rope(T)
         nxt = F.pad(tokens[:, 1:], (0, 1))
         e2 = self.mtp_emb_norm(self.embedding(nxt) * self.embed_scale)
