@@ -197,8 +197,9 @@ a large tax for a tiny model.
 | Mode | tok/s |
 |------|-------|
 | Curriculum + DoReMi, 27L/B=3 (baseline) | ~12.6k (uncapped) / ~11.9k (100W cap) |
-| Curriculum + DoReMi, **18L/B=4 (current)** | **~16,700** @100W cap, 8134 MiB |
-| Flat farm, 18L/B=4 | higher |
+| Curriculum + DoReMi, 18L/B=4 | ~22k tok/s @200W cap, 8134 MiB |
+| **Curriculum + DoReMi, 12L/B=8 (current)** | **~31.5k tok/s @200W cap**, 10273 MiB |
+| Flat farm, 12L/B=8 | higher |
 
 **Power-cap scaling (18L/B=4, 8134 MiB VRAM):** the SM clock is gated by the
 power cap, so tok/s scales with it. Measured live:
@@ -213,18 +214,18 @@ power cap, so tok/s scales with it. Measured live:
 Set via `sudo nvidia-smi -pl N` (resets to ~285W default on reboot). 200W =
 faster but hotter; 100W = cool. **250W ≈ 200W** — SM clock is at its boost
 ceiling (2730 vs 2685 MHz), so the extra 50W buys ~1% tok/s while running hotter
-(~79°C, near the 83°C throttle). **200W is the practical sweet spot.**
+(~79°C, near the 83°C throttle). **200W is the practical sweet spot.** (Clock curve is model-independent; 12L/B=8 reaches ~31.5k at 200W vs ~22k at 18L/B=4 — same ceiling, higher base from fewer layers + bigger batch.)
 
 Both clear 15k with **no torch revert**. Steady-state confirmed live after resume
 from `san_latest.pt` (step 52000).
 
 **Operational notes:**
 - `--no-checkpoint` is **not** a lever — at B=3 it OOMs at 11.84 GiB on torch 2.11.
-grad-ckpt (ckpt_every=1) → 8134 MiB, no OOM. `--num-layers N` (e.g. 18) shrinks the model and is **resume-safe** via `_resume_load` (slices MHC per-layer params to [:N], ignores extra blocks; optimizer reinitialized). 18L + B=4 = ~16,700 tok/s @100W cap, **~22k tok/s @200W cap**.
+grad-ckpt (ckpt_every=1) → fits 12GB (8134 MiB @18L/B=4, 10273 MiB @12L/B=8). `--num-layers N` shrinks the model + **auto-filters Engram sites to layers < N** (fixes OOB when N<15); resume-safe via `_resume_load` (slices MHC per-layer params to [:N], ignores extra blocks; optimizer reinitialized). **12L + B=8 = ~31.5k tok/s @200W cap** (was ~22k @18L/B=4).
 - Resume cmd: `cd /home/kenpeter/work/x-small && HF_HUB_OFFLINE=1
   TRANSFORMERS_OFFLINE=1 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
   CUDA_VISIBLE_DEVICES=0 venv_xsmall/bin/python -u train_san.py --resume
-  checkpoints/san/san_latest.pt --curriculum --num-layers 18 --batch-size 4 --steps 1000000`.
+  checkpoints/san/san_latest.pt --curriculum --num-layers 12 --batch-size 8 --steps 1000000`.
 
 ### Commits
 - `cfa5334` — port SAN to PyTorch (45.21M params, faithful). *(device + loss fixes after this are NOT yet committed — see Pending.)*
@@ -259,7 +260,7 @@ domain-tiered sampler ported from small) is stubbed/planned but not yet wired.
 ## Status & Pending
 
 ✅ Done: SAN port (45.21M @ needle2-exact / **43.85M @ 49152 current**),
-~45M scale locked (d_model 384 — user rejected 135M/66M; `num_layers` default 27, live run uses **18** for throughput).
+~45M scale locked (d_model 384 — user rejected 135M/66M; `num_layers` default 27, live run uses **12** for throughput, B=8).
 
 ✅ GPU optimization (`ad2b800`): **Triton Sinkhorn** (1.13→0.095ms, 12×, parity
 2.4e-7), **flash SDPA attention** (kills the (B,H,T,T) fp32 OOM), **grad
@@ -282,6 +283,8 @@ params to [:N], ignores extra blocks; optimizer reinitialized). B=4 forces full
 grad-ckpt (ckpt_every=1) → 8134 MiB. Live run resumed from `san_latest.pt` (step
 52000) at **~16,700 tok/s @100W cap** (+40% vs 27L/B=3). Engram fusion deferred
 (low ROI — Sinkhorn already Triton-fused at `san_model.py:504`).
+
+✅ **12L/B=8 → ~31.5k tok/s** (2026-08-27): shrank 18→**12 layers** + B=4→**8** (10273 MiB, full grad-ckpt). `_resume_load` sliced MHC per-layer params to [:12], ignored 94 extra keys (incl. layer-15 Engram). Required `san_model.py` fix: Engram sites auto-filtered to layers < N (was OOB when N<15). Steady **~31.5k tok/s @200W cap** (+43% over 18L/B=4 ~22k).
 
 ✅ **Real curriculum run LAUNCHED** (2026-08-26): `--curriculum --dedup
 --no-compile`, batch 4 × accum 8, seq 2048, `--checkpoint-dir

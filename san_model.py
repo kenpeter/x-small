@@ -413,10 +413,12 @@ class SimpleAttentionNetwork(nn.Module):
         self.embed_scale = math.sqrt(cfg.d_model)
 
         orders, heads, sub_dim = engram_geometry(cfg)
+        # Keep only engram sites that exist in the (possibly reduced) layer stack.
+        self._engram_layers = tuple(l for l in cfg.engram_layers if l < cfg.num_layers)
         self.engrams = nn.ModuleList([
             Engram(cfg.d_model, len(orders) * heads, cfg.engram_slots, sub_dim,
                    cfg.num_layers, max(orders), self.dtype)
-            for _ in cfg.engram_layers
+            for _ in self._engram_layers
         ])
         self.blocks = nn.ModuleList([
             Block(cfg.num_heads, cfg.num_kv_heads, cfg.d_model, cfg.num_layers,
@@ -471,6 +473,8 @@ class SimpleAttentionNetwork(nn.Module):
 
     def _engram_kv(self, tokens, mask):
         cfg = self.cfg
+        if not self.engrams:
+            return None
         orders, heads, _ = engram_geometry(cfg)
         indices = engram_indices(tokens, orders, heads, cfg.engram_slots)
         ngram_ok = torch.stack([_mask_diag(mask, o - 1) for o in orders for _ in range(heads)],
@@ -528,10 +532,10 @@ class SimpleAttentionNetwork(nn.Module):
         rope = (cos[None, None, :, :], sin[None, None, :, :])  # pre-sliced once
         engram_kv = self._engram_kv(tokens, mask)
 
-        # site flags: which layer fires each engram site
-        site_flags = torch.zeros((cfg.num_layers, len(cfg.engram_layers)),
+        # site flags: which (valid) layer fires each engram site
+        site_flags = torch.zeros((cfg.num_layers, len(self._engram_layers)),
                                  device=tokens.device)
-        for s, layer in enumerate(cfg.engram_layers):
+        for s, layer in enumerate(self._engram_layers):
             site_flags[layer, s] = 1.0
 
         # Multi-lane: broadcast to L lanes. fs = 4*d_model
