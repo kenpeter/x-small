@@ -159,9 +159,56 @@ forward+MTP+backward on GPU, ~3GB VRAM @ seq 512 (fits 12GB at full 2048×b32).
   - **RoPE device bug** — `precompute_rope_freqs` built tables on CPU; now moved via `._rope()` to model device.
   - **MTP loss alignment** — main CE compares full `main` vs `y` (no `[:, :-1]` slice); MTP (`mtp[:, :-1]` vs `y[:, 1:]`) predicts token[t+2] from x[t]+emb(tok[t+1]).
 - Verified **running on GPU (cuda:0, RTX 4070 Ti)**: loss 11.97→11.91→11.70 over 30 steps, ~2.5–3.0k tok/s @ batch 1 / seq 512. Full curriculum run launched at **~11.6k tok/s** (eager), batch 4 × accum 8, seq 2048 — loss ~2.9 @ step 50260.
-- Config defaults: batch 4 × accum 8 = eff 32, seq 2048, lr 4e-4 cos→1e-4, warmup 1000, save_every 2000, val_frac 0.01, **checkpoint-dir `/home/kenpeter/work/x-small/checkpoints/san`** (`san_latest.pt`, latest-only — never best.pt). Launch flags: `--curriculum --dedup` (stratified domain-tiered sampler + dedupe), **`--no-compile`** (see below).
+- Config defaults: batch 4 × accum 8 = eff 32, seq 2048, lr 4e-4 cos→1e-4, warmup 1000, save_every 2000, val_frac 0.01, **checkpoint-dir `/home/kenpeter/work/x-small/checkpoints/san`** (`san_latest.pt`, latest-only — never best.pt). Launch flags: `--curriculum --dedup` (stratified domain-tiered sampler + dedupe). Runs **with** per-layer `torch.compile` (mode=`default`, checkpoint-preserving); do **not** pass `--no-compile` — eager leaves ~30% throughput on the table (see Throughput section below).
 - **Compile-mask graph break (`san_model.py`)** — `MultiHeadAttention.forward` compared masks via `torch.equal(mask, causal_ref)` (data-dependent → torch.compile graph-break + crash when the curriculum mask changes per batch). Fixed: identity check `mask is causal_ref` against a **cached causal mask** (`_causal_mask_cache` dict + `_get_causal_mask()`); `_hidden()` and `compute_loss()` now pull the cached mask from `blocks[0].attn` / `mtp_block.attn` instead of `make_causal_mask(...)`. Compile-safe in principle.
 - **torch.compile HANGS (autotune tax pathological)** — with the mask fix, `torch.compile` still never finishes inductor autotune (>7 min wall, 0% GPU, no `✅ compiled compute_loss` line) on this 27-layer + MTP + engram + Triton-Sinkhorn model. Compiled mode was ~15k tok/s (vs ~11.6k eager) but is **unreachable**. Decision: run **`--no-compile` (eager)** — reliable for this small model; the autotune tax isn't worth it.
+
+> **⚠️ Stale note — corrected 2026-08-26:** the per-layer `torch.compile` path
+> (`_compile_model`, mode=`default`) **does** work and is the operational mode.
+> The earlier "compile hangs" was the *whole-`compute_loss`* compile; compiling
+> each block forward (checkpoint-preserving) gives 0 recompiles and the 15k+
+> result below. Do **not** run `--no-compile` for production.
+
+### Throughput — how we reached 15k+ tok/s (2026-08-26)
+
+**Myth busted:** the 15k number was *not* a torch-version artifact, and CUDA
+graphs / `max-autotune` do **not** help here. The model is 43.85M params in
+**native bf16** at B=3 — it is **overhead-bound, not compute-bound**. PyTorch
+issue #171672 confirms `max-autotune`/`reduce-overhead` (CUDA graphs) is *slower*
+for this exact shape, and our own measurement showed graphs gave 12.2k vs 12.6k
+(no-graphs). A torch 2.11→older **revert was evaluated and proved unnecessary**.
+
+**Real bottleneck = ~90 forced GPU→CPU syncs/step from `.item()` in the hot loop:**
+- `chunked_ce()` called `.item()` **8× per microbatch** (once per 256-token chunk).
+- the train loop called `.item()` **3–4× per microbatch** (loss / main / mtp / domain).
+Each `.item()` drains the pipeline on a model whose microbatch is only a few ms —
+a large tax for a tiny model.
+
+**Three changes to `train_san.py` (reversible, git-tracked):**
+1. **Killed the `.item()` sync storm** — accumulate *detached* tensors
+   (`loss_log`, `acc_main`, `acc_mtp`, `acc_dom_loss`); call `.item()` *only* at
+   log intervals. `chunked_ce` keeps `count` as a tensor and returns
+   `total / count.clamp(min=1)`.
+2. **`x.to(device, non_blocking=True)`** (was blocking) — overlaps H2D with compute.
+3. **`persistent_workers=True`** in both DataLoaders (was `False`) — stops the
+   8-worker respawn, especially on every curriculum re-glide.
+
+**Results (RTX 4070 Ti 12GB, B=3 + partial grad-ckpt, no OOM):**
+| Mode | tok/s |
+|------|-------|
+| Flat farm (no `--curriculum`) | **~16,500** |
+| Curriculum + DoReMi (`--curriculum`) | **~15,800** |
+
+Both clear 15k with **no torch revert**. Steady-state confirmed live after resume
+from `san_latest.pt` (step 52000).
+
+**Operational notes:**
+- `--no-checkpoint` is **not** a lever — at B=3 it OOMs at 11.84 GiB on torch 2.11.
+- Larger batch (B=4) + ckpt also OOMs on 2.11; B=3 is the ceiling.
+- Resume cmd: `cd /home/kenpeter/work/x-small && HF_HUB_OFFLINE=1
+  TRANSFORMERS_OFFLINE=1 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+  CUDA_VISIBLE_DEVICES=0 venv_xsmall/bin/python -u train_san.py --resume
+  checkpoints/san/san_latest.pt --curriculum --steps 2000000`.
 
 ### Commits
 - `cfa5334` — port SAN to PyTorch (45.21M params, faithful). *(device + loss fixes after this are NOT yet committed — see Pending.)*

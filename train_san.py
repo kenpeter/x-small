@@ -69,7 +69,7 @@ def build_dataloader(cfg, is_val=False):
     ds = BinShardDataset(Path(cfg.data_dir), cfg.seq_len, cfg.val_frac, is_val)
     return DataLoader(ds, batch_size=cfg.batch_size, shuffle=False,
                       num_workers=8, pin_memory=True,
-                      persistent_workers=False, prefetch_factor=4), ds
+                      persistent_workers=True, prefetch_factor=4), ds
 
 
 # ============================================================================
@@ -366,7 +366,7 @@ def build_curriculum_dataloader(cfg, is_val=False, ratios=None):
                                 ratios=ratios, dedup=cfg.dedup)
     dl = DataLoader(ds, batch_size=cfg.batch_size, shuffle=False,
                     collate_fn=_collate_curriculum, num_workers=8, pin_memory=True,
-                    persistent_workers=False, prefetch_factor=4)
+                    persistent_workers=True, prefetch_factor=4)
     return dl, ds
 
 
@@ -375,15 +375,16 @@ def chunked_ce(logits, targets, chunk=256):
     """fp32 chunked cross-entropy — avoids materializing [B,S,V] fp32 logits.
     logits (B,S,V), targets (B,S) → mean over non-(-100) tokens."""
     B, S, V = logits.shape
-    total, count = 0.0, 0
+    total = 0.0
+    count = torch.zeros((), dtype=torch.long, device=logits.device)
     for t in range(0, S, chunk):
         ce = F.cross_entropy(
             logits[:, t:t + chunk].float().reshape(-1, V),
             targets[:, t:t + chunk].reshape(-1),
             reduction="sum", ignore_index=-100)
         total += ce
-        count += (targets[:, t:t + chunk] != -100).sum().item()
-    return total / max(count, 1)
+        count += (targets[:, t:t + chunk] != -100).sum()
+    return total / count.clamp(min=1)
 
 
 def san_loss(model, x, y, mtp_weight=0.0):
@@ -634,16 +635,17 @@ def main():
                 x, y = batch["x"], batch["y"]
             else:                        # flat farm path
                 x, y = batch
-            x, y = x.to(device), y.to(device)
+            x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
             out = san_loss(model, x, y, cfg.mtp_weight)
             loss, main_ce, mtp_ce = out  # loss=tensor (backward), main/mtp=detached tensors
             loss = loss / cfg.grad_accum
-            acc_loss += loss.item() * cfg.grad_accum
-            acc_main += main_ce.item()
-            acc_mtp += mtp_ce.item()
+            loss_log = (loss.detach() * cfg.grad_accum).float()
+            acc_loss = acc_loss + loss_log
+            acc_main = acc_main + main_ce.detach().float()
+            acc_mtp = acc_mtp + mtp_ce.detach().float()
             if isinstance(batch, dict) and batch.get("domains") is not None:
                 _dom = batch["domains"][0]
-                acc_dom_loss[_dom] = acc_dom_loss.get(_dom, 0.0) + loss.item() * cfg.grad_accum
+                acc_dom_loss[_dom] = acc_dom_loss.get(_dom, torch.zeros(())) + loss_log
                 acc_dom_n[_dom] = acc_dom_n.get(_dom, 0) + 1
             loss.backward()
 
@@ -658,11 +660,11 @@ def main():
             tok_s = (cfg.batch_size * cfg.seq_len * cfg.grad_accum * cfg.log_every) / dt
             n = cfg.log_every
             ga = cfg.grad_accum
-            print(f"step {step:6d} | loss {running/n/ga:.4f} "
-                  f"[main {acc_main/ga:.3f} | mtp {acc_mtp/ga:.3f}] "
+            print(f"step {step:6d} | loss {running.item()/n/ga:.4f} "
+                  f"[main {acc_main.item()/ga:.3f} | mtp {acc_mtp.item()/ga:.3f}] "
                   f"lr {lr:.2e} | {dt:.1f}s | {tok_s:,.0f} tok/s")
             if acc_dom_loss:
-                _pd = " · ".join(f"{d} {acc_dom_loss[d]/acc_dom_n[d]:.2f}"
+                _pd = " · ".join(f"{d} {acc_dom_loss[d].item()/acc_dom_n[d]:.2f}"
                                  for d in sorted(acc_dom_loss))
                 print(f"  per-domain: {_pd}")
             running, acc_main, acc_mtp = 0.0, 0.0, 0.0
