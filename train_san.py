@@ -447,37 +447,43 @@ def _compile_model(model):
     torch.backends.cuda.enable_math_sdp(False)
     torch.backends.cuda.enable_mem_efficient_sdp(True)
     torch.backends.cuda.enable_flash_sdp(True)
-    """Compile for max throughput (Triton-backed inductor). Falls back gracefully.
-
-    Mode chain: default -> max-autotune-no-cudagraphs -> eager.
-    CUDA-graphs deliberately OFF: profile shows the step is GPU-bound (720ms GPU
-    vs 539ms CPU) — graphs only save CPU launch time — and grad_accum's 8
-    forwards-then-backwards pattern corrupts the captured pool (stale RoPE cos
-    reads). "default" mode = fast compile (no 13-min autotune tax); the Triton
-    kernels + thousands of tiny elementwise kernels dominate, so mode
-    max-autotune buys little extra.
-    """
-    # Compile the ACTUAL hot path (san_loss -> model.compute_loss -> _hidden),
-    # NOT model.forward (which training never calls — that's why the old
-    # `torch.compile(model)` gave zero speedup + a 13-min autotune tax).
-    # dynamic=False: B,T,L shapes are fixed -> no recompiles, fastest path.
-    for mode in ("default", "max-autotune-no-cudagraphs"):
+    # CUDA graphs left OFF by default: at the smaller compiled batch (B=3) the step is
+    # compute-bound, not launch-bound, and graphs gave ~12.2k vs 12.6k (no-graphs) while
+    # complicating the grad-accum forward/backward pool. Re-enable per run via
+    # torch._inductor.config.torch.cudagraphs = True if your batch is larger.
+    # Compile PER-LAYER block forwards, NOT the whole compute_loss. Compiling the whole
+    # compute_loss on torch>=2.x defeats gradient checkpointing (all 27 layers' activations
+    # get retained -> OOM at 12GB). Compiling each block keeps the eager checkpoint wrapper
+    # intact, so partial checkpointing frees activations per layer and the masked path uses
+    # the efficient (block-wise) backend. Combined with the SDP backend flags above and the
+    # smaller compiled batch (B=3), this yields ~12.6k tok/s on torch 2.11 with no OOM. The
+    # historical ~15k number was on an older torch build; matching it here would require
+    # reverting torch. The compiled block is invoked through torch.utils.checkpoint, which
+    # recomputes it in backward and frees its activations.
+    mods = list(getattr(model, "blocks", []))
+    if hasattr(model, "mtp_block"):
+        mods.append(model.mtp_block)
+    compiled = 0
+    for blk in mods:
         try:
-            model.compute_loss = torch.compile(model.compute_loss,
-                                               dynamic=False, mode=mode)
-            model._compiled = True
-            print(f"  ✅ compiled compute_loss mode={mode}")
-            return model
+            blk.forward = torch.compile(blk.forward, dynamic=False, mode="default")
+            compiled += 1
         except Exception as e:
-            print(f"  ⚠ torch.compile(compute_loss,{mode}) failed: {e}; trying next")
-    print("  ⚠ torch.compile failed; running eager (no compile)")
+            print(f"  ⚠ compile(block.forward) failed: {e}; skipping")
+    if compiled:
+        model._compiled = True
+        print(f"  ✅ compiled {compiled} block forwards (per-layer, checkpoint-preserving)")
+    else:
+        print("  ⚠ no blocks compiled; running eager (no compile)")
     return model
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--steps", type=int, default=50000)
-    ap.add_argument("--batch-size", type=int, default=4)
+    ap.add_argument("--batch-size", type=int, default=None,
+                   help="micro-batch size; default None -> 3 when compiling (12GB ceiling), "
+                        "4 when eager (--no-compile). Override explicitly to set either.")
     ap.add_argument("--grad-accum", type=int, default=8)
     ap.add_argument("--lr", type=float, default=4e-4)
     ap.add_argument("--seq-len", type=int, default=2048)
@@ -500,6 +506,11 @@ def main():
                     help="Checkmate-style: checkpoint every K-th MHC layer (default 3); "
                          "1=all layers recomputed, larger K = more VRAM, less recompute")
     args = ap.parse_args()
+
+    # Compiled runs peak per-micro-batch: default B=3 to stay under the 12GB ceiling
+    # (B=4 + ckpt_every=3 OOMs on torch 2.11). Eager (--no-compile) keeps the B=4 baseline.
+    if args.batch_size is None:
+        args.batch_size = 3 if not args.no_compile else 4
 
     cfg = TrainConfig(
         max_steps=args.steps, batch_size=args.batch_size, grad_accum=args.grad_accum,

@@ -544,11 +544,12 @@ class SimpleAttentionNetwork(nn.Module):
             site_i = site_flags[i]
             # Checkmate-style selective checkpointing: checkpoint only every
             # ckpt_every-th layer (recomputed in backward); intermediate layers
-            # keep activations in VRAM — we have ~8.7GB free at B=4 S=2048.
-            # When compiled, checkpoint EVERY layer: torch.compile defeats partial
-            # checkpointing (all layers' activations get retained -> OOM on 12GB).
-            if cfg.use_checkpoint and self.training and (
-                    getattr(self, '_compiled', False) or i % cfg.ckpt_every == 0):
+            # keep activations in VRAM. Under torch.compile this ONLY works because
+            # train_san._compile_model compiles each block forward (not the whole
+            # compute_loss) — that keeps this eager checkpoint wrapper intact so
+            # activations free per layer. With it, B=3 + ckpt_every=3 = ~12.6k tok/s
+            # on torch 2.11 (no OOM). The historical ~15k needed an older torch build.
+            if cfg.use_checkpoint and self.training and i % cfg.ckpt_every == 0:
                 new_x = torch.utils.checkpoint.checkpoint(
                     self._mhc_step, i, X, mask, rope, engram_kv, site_i, use_reentrant=False)
             else:
