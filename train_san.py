@@ -479,12 +479,43 @@ def _compile_model(model):
     return model
 
 
+def _resume_load(model, ckpt_sd):
+    """Resume-load a checkpoint whose layer count may differ from the current model.
+
+    - MHC per-layer params (first dim == num_layers, e.g. phi_pre) are sliced to
+      [:model_num_layers] rows.
+    - Block params for layers >= model count are ignored (extra blocks).
+    - All other tensors must match shape and load directly.
+    Optimizer state is NOT handled here (caller rebuilds / catches mismatch).
+    """
+    sd = model.state_dict()
+    new_sd, skipped = {}, []
+    for k, v in ckpt_sd.items():
+        if k not in sd:
+            skipped.append(k)
+            continue
+        tv = sd[k]
+        if v.shape == tv.shape:
+            new_sd[k] = v
+        elif v.dim() >= 1 and v.shape[1:] == tv.shape[1:] and v.shape[0] >= tv.shape[0]:
+            new_sd[k] = v[:tv.shape[0]].clone()   # take first model_num_layers rows
+        else:
+            skipped.append(k)
+    model.load_state_dict(new_sd, strict=False)
+    if skipped:
+        print(f"  ⚠ partial resume: ignored {len(skipped)} extra keys (e.g. {skipped[:3]})")
+    return model
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--steps", type=int, default=1000000)
     ap.add_argument("--batch-size", type=int, default=None,
                    help="micro-batch size; default None -> 3 when compiling (12GB ceiling), "
                         "4 when eager (--no-compile). Override explicitly to set either.")
+    ap.add_argument("--num-layers", type=int, default=None,
+                   help="override model num_layers (resume-safe: MHC per-layer params sliced "
+                        "to first N rows, extra blocks ignored). e.g. 18 to shrink 27->18.")
     ap.add_argument("--grad-accum", type=int, default=8)
     ap.add_argument("--lr", type=float, default=4e-4)
     ap.add_argument("--seq-len", type=int, default=2048)
@@ -521,6 +552,16 @@ def main():
         save_every=args.save_every,        curriculum=args.curriculum, dedup=args.dedup,
         use_checkpoint=not args.no_checkpoint, log_every=args.log_every)
 
+    # ---- resume-safe architecture overrides ----
+    if args.num_layers is not None:
+        cfg.num_layers = args.num_layers
+        print(f"  ⚙ num_layers overridden -> {cfg.num_layers}")
+    # B>=4 needs full gradient-checkpointing (recompute every layer) to fit 12GB
+    if args.batch_size >= 4:
+        cfg.use_checkpoint = True
+        cfg.ckpt_every = 1
+        print(f"  ⚙ batch_size={args.batch_size} -> ckpt_every=1 (full recompute) for 12GB fit")
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
     torch.manual_seed(42)
     torch.backends.cuda.matmul.allow_tf32 = True
@@ -551,7 +592,7 @@ def main():
     ckpt_path = args.resume or (latest_path if os.path.exists(latest_path) else None)
     if ckpt_path and os.path.exists(ckpt_path):
         st = torch.load(ckpt_path, map_location="cpu", weights_only=False)
-        model.load_state_dict(st["model_state_dict"])
+        model = _resume_load(model, st["model_state_dict"])
         try:
             optimizer.load_state_dict(st["optimizer_state_dict"])
         except Exception as e:

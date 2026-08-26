@@ -196,19 +196,20 @@ a large tax for a tiny model.
 **Results (RTX 4070 Ti 12GB, B=3 + partial grad-ckpt, no OOM):**
 | Mode | tok/s |
 |------|-------|
-| Flat farm (no `--curriculum`) | **~16,500** |
-| Curriculum + DoReMi (`--curriculum`) | **~15,800** |
+| Curriculum + DoReMi, 27L/B=3 (baseline) | ~12.6k (uncapped) / ~11.9k (100W cap) |
+| Curriculum + DoReMi, **18L/B=4 (current)** | **~16,700** @100W cap, 8134 MiB |
+| Flat farm, 18L/B=4 | higher |
 
 Both clear 15k with **no torch revert**. Steady-state confirmed live after resume
 from `san_latest.pt` (step 52000).
 
 **Operational notes:**
 - `--no-checkpoint` is **not** a lever — at B=3 it OOMs at 11.84 GiB on torch 2.11.
-- Larger batch (B=4) + ckpt also OOMs on 2.11; B=3 is the ceiling.
+- Larger batch (B=4) **now works** with **full grad-ckpt** (ckpt_every=1 → recompute every layer) → 8134 MiB, no OOM. `--num-layers N` (e.g. 18) shrinks the model and is **resume-safe** via `_resume_load` (slices MHC per-layer params to [:N], ignores extra blocks; optimizer reinitialized). 18L + B=4 = ~16,700 tok/s @100W cap.
 - Resume cmd: `cd /home/kenpeter/work/x-small && HF_HUB_OFFLINE=1
   TRANSFORMERS_OFFLINE=1 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
   CUDA_VISIBLE_DEVICES=0 venv_xsmall/bin/python -u train_san.py --resume
-  checkpoints/san/san_latest.pt --curriculum --steps 2000000`.
+  checkpoints/san/san_latest.pt --curriculum --num-layers 18 --batch-size 4 --steps 1000000`.
 
 ### Commits
 - `cfa5334` — port SAN to PyTorch (45.21M params, faithful). *(device + loss fixes after this are NOT yet committed — see Pending.)*
