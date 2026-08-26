@@ -214,7 +214,7 @@ power cap, so tok/s scales with it. Measured live:
 Set via `sudo nvidia-smi -pl N` (resets to ~285W default on reboot). 200W =
 faster but hotter; 100W = cool. **250W ≈ 200W** — SM clock is at its boost
 ceiling (2730 vs 2685 MHz), so the extra 50W buys ~1% tok/s while running hotter
-(~79°C, near the 83°C throttle). **200W is the practical sweet spot.** (Clock curve is model-independent; 12L/B=8 reaches ~31.5k at 200W vs ~22k at 18L/B=4 — same ceiling, higher base from fewer layers + bigger batch.)
+(~79°C, near the 83°C throttle). **200W is the practical sweet spot.** (Clock curve is model-independent; 12L/B=8 = ~23k tok/s @100W (62°C, cool) and ~31.5k @200W (77°C) — same ceiling, higher base from fewer layers + bigger batch than 18L/B=4.)
 
 Both clear 15k with **no torch revert**. Steady-state confirmed live after resume
 from `san_latest.pt` (step 52000).
