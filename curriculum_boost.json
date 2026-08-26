@@ -1,1 +1,13 @@
-{"web_easy": 1.0, "web_medium": 1.0, "web_hard": 1.0, "code_easy": 21.0, "code_medium": 12.0, "code_hard": 21.0, "code_gold": 10.0, "gold_hard": 1.0, "web_gold": 1.0, "synth_easy": 1.0, "synth_hard": 1.0, "synth_medium": 1.0, "math_easy": 1.0, "math_medium": 1.0, "math_hard": 1.0, "reformat_easy": 1.0}
+{
+  "web_easy": 0.5,
+  "web_medium": 0.35,
+  "web_hard": 0.25,
+  "web_gold": 0.5,
+  "gold_hard": 2.5,
+  "code_gold": 2.0,
+  "code_hard": 1.5,
+  "code_medium": 1.2,
+  "reformat_easy": 1.4,
+  "synth_hard": 1.3,
+  "math_hard": 1.2
+}

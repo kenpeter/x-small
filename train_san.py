@@ -363,7 +363,7 @@ def build_curriculum_dataloader(cfg, is_val=False, ratios=None):
     if ratios is None:
         ratios = get_curriculum_ratios(0, cfg.max_steps)
     ds = StratifiedShardDataset(SHARD_DIRS, seq_len=cfg.seq_len,
-                                ratios=ratios, dedup=False)
+                                ratios=ratios, dedup=cfg.dedup)
     dl = DataLoader(ds, batch_size=cfg.batch_size, shuffle=False,
                     collate_fn=_collate_curriculum, num_workers=8, pin_memory=True,
                     persistent_workers=True, prefetch_factor=4)
@@ -436,6 +436,7 @@ class TrainConfig:
     checkpoint_dir: str = "/home/kenpeter/work/x-small/checkpoints/san"  # inside project (user rule)
     dtype: str = "bfloat16"
     curriculum: bool = False  # DoReMi-lite G1-G4 stratified dynamic mix
+    dedup: bool = False       # drop near-duplicate 13-gram sequences
 
 
 def _compile_model(model):
@@ -483,6 +484,8 @@ def main():
     ap.add_argument("--resume")
     ap.add_argument("--curriculum", action="store_true",
                     help="use DoReMi-lite G1-G4 stratified dynamic mix instead of flat farm")
+    ap.add_argument("--dedup", action="store_true",
+                    help="drop exact/near-duplicate 13-gram sequences (slower startup, cleaner data)")
     ap.add_argument("--no-checkpoint", action="store_true",
                     help="disable grad-checkpointing (MHC layers) — faster compute, more VRAM")
     ap.add_argument("--ckpt-every", type=int, default=3,
@@ -494,7 +497,7 @@ def main():
         max_steps=args.steps, batch_size=args.batch_size, grad_accum=args.grad_accum,
         lr=args.lr, seq_len=args.seq_len, mtp_weight=args.mtp_weight,
         data_dir=args.data_dir, checkpoint_dir=args.checkpoint_dir,
-        save_every=args.save_every, curriculum=args.curriculum,
+        save_every=args.save_every,        curriculum=args.curriculum, dedup=args.dedup,
         use_checkpoint=not args.no_checkpoint, log_every=args.log_every)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -556,7 +559,7 @@ def main():
     _signal.signal(_signal.SIGINT, _on_signal)
 
     def save_checkpoint(step):
-        state = {"step": step, "loss": acc_loss,
+        state = {"step": step, "loss": acc_loss / cfg.grad_accum,
                  "model_state_dict": model.state_dict(),
                  "optimizer_state_dict": optimizer.state_dict(),
                  "config": cfg.__dict__}
