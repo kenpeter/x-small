@@ -301,6 +301,6 @@ this model, so **`--no-compile` (eager) is the operational mode**.
 
 🔜 Pending:
 1. **Engram fusion** (deferred) — Sinkhorn already Triton-fused (`san_model.py:504`); Engram (`san_model.py:174`) only fires at layers 2,15, so a custom fused gather+matmul kernel is low-ROI. Implement only if more headroom is needed.
-2. **Eval** trained SAN (18L) on code/math prompts.
+2. ✅ **Eval done (2026-08-27, 12L/B=8 @step 63663):** greedy + temp-sampled runs saved to `evaluations/san_{eval,sample}_step63663_*.txt`. Perplexity — code 13.76 / math 36.41 / prose 110.89 (mean 53.69). 31M-param model → limited coherence (greedy degenerates; sampled less repetitive but still weak). Code ppl is the usable signal.
 3. **Lift 100W power cap** for more tok/s (heat trade) — optional; currently capped via `nvidia-smi -pl 100` (resets on reboot).
 4. **Hermes agent-1 model config** — default switched to `hy3-free` (was `mimo-v2.5-free`); active after gateway restart.
