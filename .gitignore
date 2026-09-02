@@ -13,3 +13,13 @@ __pycache__/
 curriculum_boost.json.bak-*
 run_*.log
 smoke*.log
+
+# eval outputs (large, regenerate locally)
+evaluations/
+
+# local logs
+logs/
+
+# python venvs (never commit)
+venv*/
+.venv/

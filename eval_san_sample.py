@@ -19,7 +19,8 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 TEMP   = 0.8
 TOP_K  = 40
 TOP_P  = 0.9
-REP_PENALTY = 1.2  # suppress already-generated tokens to curb repetition loops
+REP_PENALTY = 1.8  # suppress already-generated tokens to curb repetition loops
+NO_REPEAT_NGRAM = 4  # forbid next token if it would recreate an existing 4-gram
 
 PROMPTS = [
     ("knowledge", "The capital of France is"),
@@ -82,7 +83,7 @@ def main():
 
     lines = []
     lines.append(f"SAN (x-small) SAMPLED EVAL | step={step} params={n_params/1e6:.2f}M device={DEVICE}")
-    lines.append(f"decode: temp={TEMP} top_k={TOP_K} top_p={TOP_P} max_new={MAX_NEW}")
+    lines.append(f"decode: temp={TEMP} top_k={TOP_K} top_p={TOP_P} rep_pen={REP_PENALTY} no_repeat_ngram={NO_REPEAT_NGRAM} max_new={MAX_NEW}")
     lines.append(f"training loss @ckpt = {ckpt.get('loss')}")
     lines.append("=" * 72)
 
@@ -96,6 +97,15 @@ def main():
                 if REP_PENALTY != 1.0:
                     for t in set(gen[0].tolist()):
                         logits[0, t] /= REP_PENALTY
+                # no-repeat n-gram: ban next token if it would recreate an existing n-gram
+                if NO_REPEAT_NGRAM > 0 and gen.size(1) >= NO_REPEAT_NGRAM:
+                    n = NO_REPEAT_NGRAM
+                    prev = gen[0, -(n - 1):].tolist()
+                    ngrams = {tuple(gen[0, i:i + n].tolist())
+                              for i in range(gen.size(1) - n + 1)}
+                    for tid in range(logits.size(-1)):
+                        if tuple(prev + [tid]) in ngrams:
+                            logits[0, tid] = -float("inf")
                 nxt = sample(logits, TEMP, TOP_K, TOP_P)
                 gen = torch.cat([gen, nxt], dim=-1)
                 if nxt.item() == tok.eos_token_id:
